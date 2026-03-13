@@ -4,8 +4,9 @@ Next.js + TypeScript site for App Store Connect URLs.
 
 ## Routes
 
-- `/` - Marketing / home page
-- `/support` - Support page (use as Support URL in App Store Connect)
+- `/` - Marketing / home page (Marketing URL)
+- `/support` - Support page (Support URL)
+- `/privacy` - Privacy Policy (Privacy Policy URL)
 
 ## Run locally
 

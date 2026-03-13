@@ -15,6 +15,12 @@ export default function Home() {
             >
               Support
             </Link>
+            <Link
+              href="/privacy"
+              className="text-slate-600 hover:text-slate-900"
+            >
+              Privacy
+            </Link>
           </nav>
         </div>
       </header>
