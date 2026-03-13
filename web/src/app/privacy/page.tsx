@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Nav } from "@/components/Nav";
 
 export const metadata = {
   title: "Privacy Policy | First Choice Transportation",
@@ -16,20 +17,7 @@ export default function PrivacyPage() {
           >
             First Choice Transportation
           </Link>
-          <nav className="flex gap-6">
-            <Link
-              href="/"
-              className="text-slate-600 hover:text-slate-900"
-            >
-              Home
-            </Link>
-            <Link
-              href="/support"
-              className="text-slate-600 hover:text-slate-900"
-            >
-              Support
-            </Link>
-          </nav>
+          <Nav currentPath="/privacy" />
         </div>
       </header>
 

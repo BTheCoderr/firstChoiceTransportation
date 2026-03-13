@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Nav } from "@/components/Nav";
 
 export default function Home() {
   return (
@@ -8,20 +9,7 @@ export default function Home() {
           <span className="text-xl font-semibold text-slate-800">
             First Choice Transportation
           </span>
-          <nav className="flex gap-6">
-            <Link
-              href="/support"
-              className="text-slate-600 hover:text-slate-900"
-            >
-              Support
-            </Link>
-            <Link
-              href="/privacy"
-              className="text-slate-600 hover:text-slate-900"
-            >
-              Privacy
-            </Link>
-          </nav>
+          <Nav currentPath="/" />
         </div>
       </header>
 
