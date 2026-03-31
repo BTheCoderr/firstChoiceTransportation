@@ -1,0 +1,13 @@
+# Keep broken / backup dependency trees out of the EAS upload (avoids casing errors on macOS).
+node_modules.broken.*/
+node_modules.bak/
+
+# Native projects: EAS runs prebuild on the server — do NOT upload local ios/Pods (huge; causes ETIMEDOUT).
+ios/
+android/
+
+# Separate Next.js site — not part of the Expo native app; huge and can break uploads.
+web/
+
+# Local editor metadata
+.cursor/

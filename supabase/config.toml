@@ -1,0 +1,9 @@
+# Ensures hosted Edge Function does not run legacy gateway JWT verification
+# (incompatible with newer ES256 access tokens). Auth is enforced inside the function.
+# Deploy: supabase functions deploy create-driver --project-ref xxrxzpktxeaplsnatcvn
+# Or: npm run deploy:create-driver
+
+project_id = "xxrxzpktxeaplsnatcvn"
+
+[functions.create-driver]
+verify_jwt = false
