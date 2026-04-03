@@ -4,6 +4,7 @@ import { Tabs, useRouter } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { mainHeaderScreenOptions } from "@/navigation/mainHeaderOptions";
 import { ShiftLocationProvider } from "@/providers/ShiftLocationProvider";
+import { DriverShiftProvider } from "@/providers/DriverShiftProvider";
 import { colors } from "@/theme/spacing";
 
 /**
@@ -38,6 +39,7 @@ export default function DriverLayout() {
 
   return (
     <ShiftLocationProvider>
+      <DriverShiftProvider>
       <Tabs
         screenOptions={{
           ...mainHeaderScreenOptions,
@@ -72,6 +74,7 @@ export default function DriverLayout() {
           }}
         />
       </Tabs>
+      </DriverShiftProvider>
     </ShiftLocationProvider>
   );
 }

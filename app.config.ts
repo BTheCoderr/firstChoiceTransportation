@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "First Choice Transportation",
   slug: "firstchoicetransportation",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   icon: "./assets/icon.png",
   scheme: "firstchoice",
@@ -23,6 +23,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: true,
+    /** CFBundleVersion — bump each App Store / TestFlight upload (EAS `autoIncrement` is unsupported with app.config.ts). */
+    buildNumber: "21",
     bundleIdentifier: "com.firstchoicetransportation.timesheet",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -36,6 +38,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
+    /** Increment for each Play Store upload; keep in step with iOS buildNumber when possible. */
+    versionCode: 21,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",

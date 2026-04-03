@@ -72,12 +72,51 @@ export interface DriverBaseSettings {
   defaultBaseType: "home" | "office";
 }
 
+/**
+ * Match DB rows case-insensitively (legacy or manual inserts may not use exact "Home"/"Office").
+ */
+function splitBasesByName(bases: DriverBasesRow[]): {
+  home: DriverBasesRow | undefined;
+  office: DriverBasesRow | undefined;
+} {
+  let home: DriverBasesRow | undefined;
+  let office: DriverBasesRow | undefined;
+  for (const b of bases) {
+    const n = b.name.trim().toLowerCase();
+    if (n === "home") home = b;
+    else if (n === "office") office = b;
+  }
+  return { home, office };
+}
+
+function hasCoords(row: DriverBasesRow | undefined): boolean {
+  return (
+    row != null &&
+    row.latitude != null &&
+    row.longitude != null &&
+    Number.isFinite(row.latitude) &&
+    Number.isFinite(row.longitude)
+  );
+}
+
 export function basesRowsToSettings(bases: DriverBasesRow[]): DriverBaseSettings {
-  const home = bases.find((b) => b.name === "Home");
-  const office = bases.find((b) => b.name === "Office");
+  const { home, office } = splitBasesByName(bases);
   const defaultRow = bases.find((b) => b.is_default);
-  const defaultBaseType: "home" | "office" =
-    defaultRow?.name === "Office" ? "office" : "home";
+  const homeOk = hasCoords(home);
+  const officeOk = hasCoords(office);
+
+  let defaultBaseType: "home" | "office";
+  if (defaultRow) {
+    const n = defaultRow.name.trim().toLowerCase();
+    defaultBaseType = n === "office" ? "office" : "home";
+  } else if (officeOk && !homeOk) {
+    /** Only Office has coords and no row is marked default — use Office for travel. */
+    defaultBaseType = "office";
+  } else {
+    /** Prefer Home when both exist, when only Home exists, or when neither (resolve will still fail). */
+    defaultBaseType = "home";
+  }
+
   return {
     homeBaseAddress: home?.address ?? null,
     homeBaseLatitude: home?.latitude ?? null,

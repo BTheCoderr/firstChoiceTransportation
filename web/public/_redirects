@@ -1,0 +1,4 @@
+# Netlify reads this from the publish root (copied from public/ by `next build`).
+# Ensures /auth/reset-password (no trailing slash) serves the static export.
+# Use 200 rewrite so #hash fragments from Supabase are preserved (avoid 301).
+/auth/reset-password    /auth/reset-password/index.html   200

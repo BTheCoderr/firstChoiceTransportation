@@ -27,26 +27,20 @@ export async function getDriverBaseSettings(
 }
 
 /**
- * Row marked `is_default` — used for travel-time to base. No fallback to the other base.
+ * Resolves the default base row for travel-time (same logic as endShift).
+ * Uses one fetch and case-insensitive name matching so DB casing matches UI.
  */
 export async function getDefaultBaseForDriver(
   driverId: string
 ): Promise<DriverBasesRow | null> {
-  const settings = await getDriverBaseSettings(driverId);
+  const bases = await getBasesForDriver(driverId);
+  const settings = basesRowsToSettings(bases);
   const resolved = resolveDefaultBaseForTravel(settings);
   if (!resolved) return null;
 
-  const name = resolved.name;
-  const { data, error } = await supabase
-    .from("driver_bases")
-    .select("*")
-    .eq("driver_id", driverId)
-    .eq("name", name)
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data as DriverBasesRow;
+  const want = resolved.name.toLowerCase();
+  const row = bases.find((b) => b.name.trim().toLowerCase() === want);
+  return row ?? null;
 }
 
 export interface UpsertNamedBaseInput {

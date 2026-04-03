@@ -2,3 +2,12 @@
   base = "web"
   command = "npm run build"
   publish = "out"
+
+# Next `output: "export"` + `trailingSlash: true` emits `auth/reset-password/index.html`.
+# Map the no-slash URL to that file with a rewrite (200) so the hash from Supabase
+# recovery emails is not dropped (a 301 to …/ can strip #fragments in some cases).
+[[redirects]]
+  from = "/auth/reset-password"
+  to = "/auth/reset-password/index.html"
+  status = 200
+  force = true

@@ -6,10 +6,10 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { SINGLE_COMPANY_ID } from "@/constants/company";
 import { useAuth } from "@/hooks/useAuth";
-import { useDriverShift } from "@/hooks/useDriverShift";
+import { useDriverShift } from "@/providers/DriverShiftProvider";
 import { useDriverLocation } from "@/providers/ShiftLocationProvider";
 import { getCurrentPosition } from "@/services/location";
 import { getTodaysLastShiftForDriver } from "@/services/shifts";
@@ -39,7 +39,7 @@ export default function DriverHomeScreen() {
   const { profile } = useAuth();
   const driverId = profile?.id;
   const { activeShift, isLoading, isStarting, refresh, startShift } =
-    useDriverShift(driverId);
+    useDriverShift();
   const {
     permissionReady,
     foregroundPermission,
@@ -68,6 +68,13 @@ export default function DriverHomeScreen() {
       setTodaysLastShift(null);
     }
   }, [driverId, activeShift, loadTodaysLastShift]);
+
+  /** When Home tab gains focus, sync active shift from server (fixes stale state vs Shift tab). */
+  useFocusEffect(
+    useCallback(() => {
+      void refresh({ silent: true });
+    }, [refresh])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);

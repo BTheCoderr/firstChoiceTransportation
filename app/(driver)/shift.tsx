@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,9 @@ import {
   RefreshControl,
   Pressable,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { useDriverShift } from "@/hooks/useDriverShift";
+import { useDriverShift } from "@/providers/DriverShiftProvider";
 import { useDriverLocation } from "@/providers/ShiftLocationProvider";
 import { LocationStatusCard } from "@/components/driver/LocationStatusCard";
 import { LocationTrackingCard } from "@/components/driver/LocationTrackingCard";
@@ -55,7 +55,7 @@ export default function DriverShiftScreen() {
     isEnding,
     refresh,
     endShift,
-  } = useDriverShift(profile?.id);
+  } = useDriverShift();
   const tracking = useDriverLocation();
   const {
     permissionReady,
@@ -91,6 +91,17 @@ export default function DriverShiftScreen() {
       );
     }
   }, [profile?.id]);
+
+  /** Sync shared shift state from server + re-check base when Shift tab gains focus (matches Home). */
+  useFocusEffect(
+    useCallback(() => {
+      void refresh({ silent: true });
+      if (!profile?.id) return;
+      getDefaultBaseForDriver(profile.id).then((base) =>
+        setHasBaseLocation(!!base)
+      );
+    }, [refresh, profile?.id])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
