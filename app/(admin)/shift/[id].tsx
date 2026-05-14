@@ -15,6 +15,7 @@ import { LocationWithAddress } from "@/components/admin/LocationWithAddress";
 import { getMapsDirectionsUrl } from "@/services/geocoding";
 import { ScreenContainer, ScreenSection } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
+import type { ShiftsRow } from "@/types/database";
 
 function formatTime(iso: string): string {
   try {
@@ -70,6 +71,27 @@ function formatSuspiciousReason(reason: string | null): string {
     extended_shift: "Shift time exceeds reasonable max",
   };
   return labels[reason] ?? reason;
+}
+
+function returnEtaMarkedUnavailable(
+  shift: Pick<ShiftsRow, "suspicious_details">
+): boolean {
+  const d = shift.suspicious_details;
+  return (
+    d != null &&
+    typeof d === "object" &&
+    (d as { return_eta_unavailable?: unknown }).return_eta_unavailable === true
+  );
+}
+
+function returnCommuteUncappedMinutes(
+  shift: Pick<ShiftsRow, "suspicious_details">
+): number | undefined {
+  const d = shift.suspicious_details;
+  if (d == null || typeof d !== "object") return undefined;
+  const raw = (d as { return_commute_uncapped_minutes?: unknown })
+    .return_commute_uncapped_minutes;
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : undefined;
 }
 
 export default function AdminShiftDetailScreen() {
@@ -134,6 +156,14 @@ export default function AdminShiftDetailScreen() {
     shift.last_dropoff_lat != null &&
     shift.last_dropoff_lng != null;
 
+  const hasReturnAudit = shift.estimated_return_minutes != null;
+
+  /** Option B payout path: ended shift plus dropoff coords and/or applied return estimate. */
+  const showReturnToBaseClockOut =
+    Boolean(shift.clock_out_at) && (hasReturnAudit || hasDropoff);
+  const etaWasUnavailable = returnEtaMarkedUnavailable(shift);
+  const uncappedReturnEstimate = returnCommuteUncappedMinutes(shift);
+
   return (
     <ScreenContainer
       refreshControl={
@@ -166,7 +196,12 @@ export default function AdminShiftDetailScreen() {
               : "—"}
           </Text>
           <Text style={styles.row}>
-            Verified: {formatMinutes(shift.verified_hours_minutes)}
+            Verified (paid span):{" "}
+            {formatMinutes(shift.verified_hours_minutes)}
+          </Text>
+          <Text style={styles.helpMuted}>
+            Paid end time reflects last dropoff plus applied return-to-base
+            estimate to the saved home or office—not the tap time alone.
           </Text>
           {shift.first_movement_at && (
             <Text style={styles.row}>
@@ -176,19 +211,79 @@ export default function AdminShiftDetailScreen() {
         </View>
       </ScreenSection>
 
-      {hasDropoff && (
-        <ScreenSection title="Final dropoff">
+      {showReturnToBaseClockOut ? (
+        <ScreenSection title="Return-to-base clock-out">
           <View style={styles.card}>
             <Text style={styles.row}>
-              At: {formatTime(shift.last_dropoff_at!)}
+              Last dropoff time:{" "}
+              {shift.last_dropoff_at
+                ? `${formatDate(shift.last_dropoff_at)} at ${formatTime(
+                    shift.last_dropoff_at
+                  )}`
+                : "—"}
             </Text>
-            <LocationWithAddress
-              latitude={shift.last_dropoff_lat!}
-              longitude={shift.last_dropoff_lng!}
-            />
+            <Text style={styles.row}>
+              Estimated return minutes:{" "}
+              {shift.estimated_return_minutes != null
+                ? `${shift.estimated_return_minutes} min (applied)`
+                : "—"}
+            </Text>
+            {uncappedReturnEstimate != null ? (
+              <Text style={styles.row}>
+                Uncapped return estimate (audit):{" "}
+                <Text style={{ fontWeight: "600" }}>
+                  {uncappedReturnEstimate} min
+                </Text>{" "}
+                (straight-line ETA before payroll cap; see applied value above)
+              </Text>
+            ) : null}
+            {etaWasUnavailable ? (
+              <Text style={styles.warnMuted}>
+                Return ETA could not be calculated reliably; shift was closed with
+                0 paid return minutes—paid clock-out matches last dropoff time.
+              </Text>
+            ) : null}
+            <Text style={styles.row}>
+              Paid clock-out time:{" "}
+              {shift.clock_out_at
+                ? `${formatDate(shift.clock_out_at)} at ${formatTime(
+                    shift.clock_out_at
+                  )}`
+                : "—"}
+            </Text>
+            <Text style={[styles.row, styles.subheading]}>Saved return base</Text>
+            <Text style={styles.row}>
+              Return base type: {shift.return_base_type ?? "—"}
+            </Text>
+            <Text style={styles.row}>
+              Return base address:{" "}
+              {shift.return_base_address &&
+              shift.return_base_address.length > 0
+                ? shift.return_base_address
+                : "—"}
+            </Text>
+            <Text style={styles.row}>
+              Return base coordinates:{" "}
+              {shift.return_base_lat != null && shift.return_base_lng != null
+                ? `${shift.return_base_lat.toFixed(5)}, ${shift.return_base_lng.toFixed(
+                    5
+                  )}`
+                : "—"}
+            </Text>
+            {hasDropoff ? (
+              <>
+                <Text style={[styles.row, styles.subheading, styles.topPad]}>
+                  Last dropoff map
+                </Text>
+                <LocationWithAddress
+                  latitude={shift.last_dropoff_lat!}
+                  longitude={shift.last_dropoff_lng!}
+                />
+              </>
+            ) : null}
           </View>
         </ScreenSection>
-      )}
+      ) : null}
 
       <ScreenSection title="Route & stops">
         <View style={styles.card}>
@@ -323,6 +418,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#475569",
     marginBottom: spacing.sm,
+  },
+  helpMuted: {
+    fontSize: 12,
+    color: colors.textSubtle,
+    marginTop: spacing.xs,
+    marginBottom: spacing.sm,
+    lineHeight: 18,
+  },
+  warnMuted: {
+    fontSize: 13,
+    color: "#c2410c",
+    marginBottom: spacing.sm,
+    lineHeight: 20,
+  },
+  subheading: {
+    marginTop: spacing.sm,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  topPad: {
+    marginTop: spacing.md,
   },
   viewRouteButton: {
     marginTop: spacing.md,

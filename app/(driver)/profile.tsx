@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
 import { getDriverBaseSettings } from "@/services/driverBases";
@@ -9,22 +9,39 @@ import {
 } from "@/types/app";
 import { ScreenContainer, ScreenLead, ScreenTitle } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
+import { useMountedRef } from "@/hooks/useMountedRef";
 
 export default function DriverProfileScreen() {
   const { profile } = useAuth();
   const driverId = profile?.id;
   const [settings, setSettings] = useState<DriverBaseSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const loadBase = useCallback(async () => {
-    if (!driverId) return;
-    const s = await getDriverBaseSettings(driverId);
-    setSettings(s);
-  }, [driverId]);
+  const { safeSetState } = useMountedRef();
 
   useEffect(() => {
-    loadBase().finally(() => setIsLoading(false));
-  }, [loadBase]);
+    let cancelled = false;
+    if (!driverId) {
+      safeSetState(() => setIsLoading(false));
+      return;
+    }
+    void (async () => {
+      try {
+        const s = await getDriverBaseSettings(driverId);
+        if (!cancelled) {
+          safeSetState(() => setSettings(s));
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        if (!cancelled) {
+          safeSetState(() => setIsLoading(false));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [driverId, safeSetState]);
 
   if (isLoading) {
     return (

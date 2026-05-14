@@ -1,12 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import {
   adminRootStackScreenOptions,
   adminStackScreenOptions,
 } from "@/navigation/adminStackScreenOptions";
+import { iosNativeStackMitigation } from "@/navigation/iosNativeStackOptions";
 import { colors } from "@/theme/spacing";
+import {
+  pathnameIsRootIndex,
+  pathnameMatchesAuth,
+  pathnameMatchesDriver,
+} from "@/navigation/routeGuards";
 
 /**
  * Admin stack only for profile role `admin`. Drivers redirect to `/(driver)`.
@@ -14,18 +20,31 @@ import { colors } from "@/theme/spacing";
  */
 export default function AdminLayout() {
   const router = useRouter();
-  const { role, isLoading, profileLoading } = useAuth();
+  const pathname = usePathname();
+  const segments = useSegments();
+  const segmentKey = segments.join("/");
+  const { role, user, isLoading, profileLoading } = useAuth();
+
+  const stackScreenOptions = useMemo(
+    () => ({ ...iosNativeStackMitigation }),
+    []
+  );
 
   useEffect(() => {
     if (isLoading || profileLoading) return;
+
     if (role === "driver") {
-      router.replace("/(driver)");
+      if (!pathnameMatchesDriver(pathname)) router.replace("/(driver)");
       return;
     }
     if (role !== "admin") {
-      router.replace("/");
+      if (!user) {
+        if (!pathnameMatchesAuth(pathname)) router.replace("/(auth)");
+      } else if (!pathnameMatchesAuth(pathname) && !pathnameIsRootIndex(pathname)) {
+        router.replace("/");
+      }
     }
-  }, [role, isLoading, profileLoading, router]);
+  }, [role, user, isLoading, profileLoading, segmentKey, pathname, router]);
 
   const showShell =
     !isLoading && !profileLoading && role === "admin";
@@ -39,7 +58,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <Stack>
+    <Stack screenOptions={stackScreenOptions}>
       <Stack.Screen
         name="index"
         options={{

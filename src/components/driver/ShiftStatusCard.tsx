@@ -65,6 +65,10 @@ export function ShiftStatusCard({ shift, onViewShift }: ShiftStatusCardProps) {
     <View style={styles.card}>
       <Text style={styles.badge}>Active</Text>
       <Text style={styles.title}>Shift in progress</Text>
+      <Text style={styles.hint}>
+        Scroll down to End your shift below when you are at your last dropoff.
+        Paid time includes an estimated drive to your base from that tap.
+      </Text>
       <Text style={styles.duration}>Shift running: {durationDisplay}</Text>
       <Text style={styles.time}>Started at {formatTime(shift.clock_in_at)}</Text>
       <Text
@@ -112,6 +116,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 4,
+  },
+  hint: {
+    fontSize: 14,
+    color: "#047857",
+    marginBottom: 12,
+    lineHeight: 20,
   },
   duration: {
     fontSize: 20,

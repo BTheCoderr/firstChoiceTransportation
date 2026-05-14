@@ -9,6 +9,8 @@ try {
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
+  /** TestFlight crash: Fabric RNSScreen snapshot + TurboModule. Disable New Arch to validate (requires new native build). */
+  newArchEnabled: false,
   name: "First Choice Transportation",
   slug: "firstchoicetransportation",
   version: "1.0.1",
@@ -24,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     /** CFBundleVersion — bump each App Store / TestFlight upload (EAS `autoIncrement` is unsupported with app.config.ts). */
-    buildNumber: "22",
+    buildNumber: "23",
     bundleIdentifier: "com.firstchoicetransportation.timesheet",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -39,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     /** Increment for each Play Store upload; keep in step with iOS buildNumber when possible. */
-    versionCode: 22,
+    versionCode: 23,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
@@ -52,6 +54,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
   },
   plugins: [
+    "expo-asset",
     "expo-font",
     "expo-router",
     [

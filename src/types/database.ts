@@ -56,6 +56,12 @@ export interface ShiftsRow {
   last_dropoff_at: string | null;
   last_dropoff_lat: number | null;
   last_dropoff_lng: number | null;
+  /** Minutes applied: last_dropoff_at + this → paid clock_out (capped via MAX_COMMUTE_ESTIMATE_MINUTES). */
+  estimated_return_minutes: number | null;
+  return_base_lat: number | null;
+  return_base_lng: number | null;
+  return_base_type: string | null;
+  return_base_address: string | null;
   verified_hours_minutes: number | null;
   status: ShiftStatus;
   suspicious_reason: string | null;
@@ -146,6 +152,11 @@ export interface ShiftsInsert {
   last_dropoff_at?: string | null;
   last_dropoff_lat?: number | null;
   last_dropoff_lng?: number | null;
+  estimated_return_minutes?: number | null;
+  return_base_lat?: number | null;
+  return_base_lng?: number | null;
+  return_base_type?: string | null;
+  return_base_address?: string | null;
   verified_hours_minutes?: number | null;
   status?: ShiftStatus;
   suspicious_reason?: string | null;
@@ -225,6 +236,11 @@ export interface ShiftsUpdate {
   last_dropoff_at?: string | null;
   last_dropoff_lat?: number | null;
   last_dropoff_lng?: number | null;
+  estimated_return_minutes?: number | null;
+  return_base_lat?: number | null;
+  return_base_lng?: number | null;
+  return_base_type?: string | null;
+  return_base_address?: string | null;
   verified_hours_minutes?: number | null;
   status?: ShiftStatus;
   suspicious_reason?: string | null;

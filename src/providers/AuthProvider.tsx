@@ -2,6 +2,7 @@ import React, {
   createContext,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -81,7 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setRecoveryInProgress(false);
   }, []);
 
-  const applyAuthSession = useCallback((next: Session | null) => {
+  /** Returns false when session was already applied (dedupes duplicate SIGNED_OUT / signOut). */
+  const applyAuthSession = useCallback((next: Session | null): boolean => {
     const nextKey = getSessionKey(next);
     if (
       lastAppliedSessionKeyRef.current !== undefined &&
@@ -93,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           next?.user?.id ?? null
         );
       }
-      return;
+      return false;
     }
     lastAppliedSessionKeyRef.current = nextKey;
     setSession(next);
@@ -105,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         next?.user?.id ?? "null"
       );
     }
+    return true;
   }, []);
 
   const loadProfile = useCallback(async (userId: string) => {
@@ -145,13 +148,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearRecoveryFlags();
     profileLoadGenRef.current += 1;
     setProfileLoading(false);
-    setIsLoading(true);
     await supabase.auth.signOut();
     lastProfileUserIdRef.current = null;
-    applyAuthSession(null);
-    setProfile(null);
-    setRole(null);
-    setProfileError(null);
+    const {
+      data: { session: after },
+    } = await supabase.auth.getSession();
+    if (!after) {
+      applyAuthSession(null);
+      setProfile((p) => (p === null ? p : null));
+      setRole((r) => (r === null ? r : null));
+      setProfileError((e) => (e === null ? e : null));
+    }
     setIsLoading((prev) => (prev ? false : prev));
   }, [applyAuthSession, clearRecoveryFlags]);
 
@@ -318,15 +325,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (__DEV__) {
         console.log("[AuthProvider] handleAuthStateChange", event);
       }
+
+      if (event === "PASSWORD_RECOVERY") {
+        recoveryInProgressRef.current = true;
+        setRecoveryInProgress(true);
+        scheduleRecoveryNav();
+      }
+
+      const applied = applyAuthSession(nextSession);
+
+      /** Duplicate SIGNED_OUT after session already null: full no-op (no try/finally, no setIsLoading). */
+      if (!applied && !nextSession?.user) {
+        return;
+      }
+
       try {
-        if (event === "PASSWORD_RECOVERY") {
-          recoveryInProgressRef.current = true;
-          setRecoveryInProgress(true);
-          scheduleRecoveryNav();
-        }
-
-        applyAuthSession(nextSession);
-
         if (!nextSession?.user) {
           lastProfileUserIdRef.current = null;
           clearRecoveryFlags();
@@ -417,18 +430,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearRecoveryFlags,
   ]);
 
-  const value: AuthContextValue = {
-    user,
-    profile,
-    role,
-    isLoading,
-    accessToken: session?.access_token ?? null,
-    profileLoading,
-    profileError,
-    recoveryInProgress,
-    signOut,
-    retryLoadProfile,
-  };
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      profile,
+      role,
+      isLoading,
+      accessToken: session?.access_token ?? null,
+      profileLoading,
+      profileError,
+      recoveryInProgress,
+      signOut,
+      retryLoadProfile,
+    }),
+    [
+      user,
+      profile,
+      role,
+      isLoading,
+      session?.access_token,
+      profileLoading,
+      profileError,
+      recoveryInProgress,
+      signOut,
+      retryLoadProfile,
+    ]
+  );
 
   return (
     <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

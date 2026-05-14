@@ -1,30 +1,19 @@
-import { useEffect, useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { spacing } from "@/theme/spacing";
-import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "@/hooks/useAuth";
 
+/**
+ * Sign out only — route-group layouts redirect to `/(auth)` when `user` is null.
+ * Avoids competing `router.replace` calls with layout guards (max update depth).
+ */
 export function LogoutButton() {
-  const router = useRouter();
   const { signOut } = useAuth();
-  const [redirectToAuth, setRedirectToAuth] = useState(false);
-
-  useEffect(() => {
-    if (!redirectToAuth) return;
-    setRedirectToAuth(false);
-    router.replace("/(auth)");
-  }, [redirectToAuth, router]);
-
-  const handleLogout = async () => {
-    await signOut();
-    setRedirectToAuth(true);
-  };
 
   return (
     <Pressable
       style={styles.button}
-      onPress={handleLogout}
+      onPress={() => void signOut()}
       accessibilityLabel="Log out"
       accessibilityRole="button"
     >

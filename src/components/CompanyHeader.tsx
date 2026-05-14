@@ -1,4 +1,4 @@
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 
 type CompanyHeaderProps = {
   /**
@@ -8,14 +8,10 @@ type CompanyHeaderProps = {
   fillNavTitleWidth?: boolean;
 };
 
+/** Text-only title (logo removed — can reintroduce asset in-app later). */
 export function CompanyHeader({ fillNavTitleWidth = false }: CompanyHeaderProps) {
   return (
     <View style={[styles.container, fillNavTitleWidth && styles.containerFill]}>
-      <Image
-        source={require("../../assets/first-choice-transportation-logo.png")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
       <Text
         style={[styles.companyName, fillNavTitleWidth && styles.companyNameFill]}
       >
@@ -29,26 +25,23 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    gap: 12,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   containerFill: {
     alignSelf: "stretch",
     width: "100%",
     maxWidth: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingTop: 4,
     paddingBottom: 0,
-  },
-  logo: {
-    width: 36,
-    height: 36,
   },
   companyName: {
     fontSize: 16,
     fontWeight: "600",
     color: "#1e293b",
+    textAlign: "center",
   },
   companyNameFill: {
     flex: 1,
