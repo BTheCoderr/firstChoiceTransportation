@@ -2,11 +2,14 @@
 -- Scope admin reads to their own company. Replaces broad "Admins can read all..."
 -- policies from 001_initial_schema.sql that ignored company_id.
 -- Uses public.get_my_profile_meta() helper (see 009_fix_profiles_rls_recursion.sql).
+-- This script is idempotent: every CREATE POLICY is preceded by DROP ... IF EXISTS
+-- so a partial prior run can be re-applied cleanly.
 -- =============================================================================
 
 -- ---------- shifts ----------
 
 DROP POLICY IF EXISTS "Admins can read all shifts" ON shifts;
+DROP POLICY IF EXISTS "Admins can read company shifts" ON shifts;
 
 CREATE POLICY "Admins can read company shifts"
   ON shifts FOR SELECT
@@ -21,6 +24,9 @@ CREATE POLICY "Admins can read company shifts"
 -- so a driver can never claim another company's id on insert.
 
 DROP POLICY IF EXISTS "Drivers can manage own shifts" ON shifts;
+DROP POLICY IF EXISTS "Drivers can select own shifts" ON shifts;
+DROP POLICY IF EXISTS "Drivers can insert own shifts" ON shifts;
+DROP POLICY IF EXISTS "Drivers can update own shifts" ON shifts;
 
 CREATE POLICY "Drivers can select own shifts"
   ON shifts FOR SELECT
@@ -44,6 +50,7 @@ CREATE POLICY "Drivers can update own shifts"
 -- ---------- route_points ----------
 
 DROP POLICY IF EXISTS "Admins can read all route_points" ON route_points;
+DROP POLICY IF EXISTS "Admins can read company route_points" ON route_points;
 
 CREATE POLICY "Admins can read company route_points"
   ON route_points FOR SELECT
@@ -59,6 +66,7 @@ CREATE POLICY "Admins can read company route_points"
 -- ---------- client_stops ----------
 
 DROP POLICY IF EXISTS "Admins can read all client_stops" ON client_stops;
+DROP POLICY IF EXISTS "Admins can read company client_stops" ON client_stops;
 
 CREATE POLICY "Admins can read company client_stops"
   ON client_stops FOR SELECT
@@ -76,6 +84,9 @@ CREATE POLICY "Admins can read company client_stops"
 DROP POLICY IF EXISTS "Admins can read all driver_bases" ON driver_bases;
 DROP POLICY IF EXISTS "Admins can insert driver_bases" ON driver_bases;
 DROP POLICY IF EXISTS "Admins can update driver_bases" ON driver_bases;
+DROP POLICY IF EXISTS "Admins can read company driver_bases" ON driver_bases;
+DROP POLICY IF EXISTS "Admins can insert company driver_bases" ON driver_bases;
+DROP POLICY IF EXISTS "Admins can update company driver_bases" ON driver_bases;
 
 CREATE POLICY "Admins can read company driver_bases"
   ON driver_bases FOR SELECT
@@ -114,6 +125,8 @@ CREATE POLICY "Admins can update company driver_bases"
 
 DROP POLICY IF EXISTS "Admins can read all weekly_summaries" ON weekly_summaries;
 DROP POLICY IF EXISTS "Admins can manage weekly_summaries" ON weekly_summaries;
+DROP POLICY IF EXISTS "Admins can read company weekly_summaries" ON weekly_summaries;
+DROP POLICY IF EXISTS "Admins can manage company weekly_summaries" ON weekly_summaries;
 
 CREATE POLICY "Admins can read company weekly_summaries"
   ON weekly_summaries FOR SELECT
