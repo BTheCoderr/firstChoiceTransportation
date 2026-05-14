@@ -14,7 +14,10 @@
     "bump:version:minor": "node scripts/bump-version.js minor",
     "bump:version:major": "node scripts/bump-version.js major",
     "build:ios": "eas build --platform ios --profile production --auto-submit",
-    "deploy:create-driver": "supabase functions deploy create-driver --no-verify-jwt --project-ref xxrxzpktxeaplsnatcvn"
+    "deploy:create-driver": "supabase functions deploy create-driver --no-verify-jwt --project-ref xxrxzpktxeaplsnatcvn",
+    "qa:option-b-timing": "node scripts/option-b-timing-qa.mjs",
+    "deps:verify": "node -e \"const p=require('./node_modules/react-native-screens/package.json'); if(p.version!=='4.16.0'){console.error('Expected react-native-screens@4.16.0, got',p.version); process.exit(1)} console.log('react-native-screens@'+p.version);\"",
+    "deps:reinstall": "rm -rf node_modules && npm install"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
@@ -23,6 +26,7 @@
     "@supabase/supabase-js": "^2.39.0",
     "dotenv": "^17.3.1",
     "expo": "^54.0.33",
+    "expo-asset": "~12.0.12",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",
     "expo-font": "~14.0.11",
@@ -37,7 +41,7 @@
     "react": "19.1.0",
     "react-native": "0.81.5",
     "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0",
+    "react-native-screens": "4.16.0",
     "react-native-url-polyfill": "^2.0.0"
   },
   "devDependencies": {
@@ -48,6 +52,7 @@
     "typescript": "~5.9.2"
   },
   "overrides": {
+    "react-native-screens": "4.16.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "send": "^0.19.0",

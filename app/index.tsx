@@ -1,9 +1,15 @@
 import { useEffect } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Pressable } from "react-native";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter, useSegments } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { ScreenContainer } from "@/components/layout";
 import { colors, spacing } from "@/theme/spacing";
+import {
+  pathnameMatchesAdmin,
+  pathnameMatchesAuth,
+  pathnameMatchesDriver,
+  pathnameMatchesRecoveryUpdatePassword,
+} from "@/navigation/routeGuards";
 
 /**
  * Root gate: never return null — always show loading, error, or redirecting UI.
@@ -11,6 +17,10 @@ import { colors, spacing } from "@/theme/spacing";
  */
 export default function IndexScreen() {
   const router = useRouter();
+  const pathname = usePathname();
+  const segments = useSegments();
+  /** Stable primitive — avoids useSegments() new array ref every render in effect deps. */
+  const segmentKey = segments.join("/");
   const {
     user,
     profile,
@@ -40,11 +50,13 @@ export default function IndexScreen() {
 
     const id = setTimeout(() => {
       if (!user) {
-        router.replace("/(auth)");
+        if (!pathnameMatchesAuth(pathname)) router.replace("/(auth)");
         return;
       }
       if (recoveryInProgress) {
-        router.replace("/(auth)/update-password");
+        if (!pathnameMatchesRecoveryUpdatePassword(pathname)) {
+          router.replace("/(auth)/update-password");
+        }
         return;
       }
       if (!profile) {
@@ -52,18 +64,28 @@ export default function IndexScreen() {
         return;
       }
       if (role === "driver") {
-        router.replace("/(driver)");
+        if (!pathnameMatchesDriver(pathname)) router.replace("/(driver)");
         return;
       }
       if (role === "admin") {
-        router.replace("/(admin)");
+        if (!pathnameMatchesAdmin(pathname)) router.replace("/(admin)");
         return;
       }
-      router.replace("/(auth)");
+      if (!pathnameMatchesAuth(pathname)) router.replace("/(auth)");
     }, 0);
 
     return () => clearTimeout(id);
-  }, [user, profile, role, authBootBusy, recoveryInProgress, profileError, router]);
+  }, [
+    user,
+    profile,
+    role,
+    authBootBusy,
+    recoveryInProgress,
+    profileError,
+    router,
+    pathname,
+    segmentKey,
+  ]);
 
   if (recoveryInProgress && user) {
     return (

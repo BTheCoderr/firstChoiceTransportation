@@ -2,6 +2,7 @@ import type { ReactElement, ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  type RefreshControlProps,
   ScrollView,
   StyleSheet,
   View,
@@ -25,7 +26,7 @@ export type ScreenContainerProps = {
    * `fullBleed`: no native header (auth, root) — SafeAreaView on all edges.
    */
   safeAreaMode?: ScreenSafeAreaMode;
-  refreshControl?: ReactElement;
+  refreshControl?: ReactElement<RefreshControlProps>;
   contentContainerStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
   keyboardShouldPersistTaps?: ScrollViewProps["keyboardShouldPersistTaps"];

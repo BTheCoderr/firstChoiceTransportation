@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { getCurrentPosition } from "@/services/location";
+import { MAX_COMMUTE_ESTIMATE_MINUTES } from "@/services/travelEstimate";
 
 interface FinalDropoffCardProps {
   onFinalDropoff: (
@@ -27,6 +28,8 @@ export function FinalDropoffCard({
 }: FinalDropoffCardProps) {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  /** Guard against rapid double-taps slipping past the parent isEnding spinner before it propagates. */
+  const endInFlightRef = useRef(false);
 
   const openSettings = () => {
     if (Platform.OS === "ios") {
@@ -37,6 +40,7 @@ export function FinalDropoffCard({
   };
 
   const handleFinalDropoff = async () => {
+    if (endInFlightRef.current) return;
     if (!hasBaseLocation) {
       Alert.alert(
         "Base location required",
@@ -45,6 +49,7 @@ export function FinalDropoffCard({
       return;
     }
 
+    endInFlightRef.current = true;
     setLocationError(null);
     setIsGettingLocation(true);
     let position: Awaited<ReturnType<typeof getCurrentPosition>>;
@@ -56,6 +61,7 @@ export function FinalDropoffCard({
 
     if (!position.ok) {
       setLocationError(position.error);
+      endInFlightRef.current = false;
       return;
     }
 
@@ -64,7 +70,10 @@ export function FinalDropoffCard({
       result = await onFinalDropoff(position.lat, position.lng);
     } catch {
       Alert.alert("Error", "Could not complete shift. Please try again.");
+      endInFlightRef.current = false;
       return;
+    } finally {
+      endInFlightRef.current = false;
     }
 
     if (!result.success) {
@@ -72,6 +81,14 @@ export function FinalDropoffCard({
         Alert.alert(
           "Base location required",
           "No base location was found for your account. Ask your admin to set your home or office base, then try again."
+        );
+      } else if (
+        result.error === "INVALID_INPUT" ||
+        result.error === "INVALID_DROP_OFF_TIME"
+      ) {
+        Alert.alert(
+          "Invalid dropoff details",
+          "We couldn't use your GPS or timestamp to finish your shift. Please try again once you have a location fix."
         );
       } else {
         Alert.alert("Error", "Could not complete shift. Please try again.");
@@ -84,7 +101,7 @@ export function FinalDropoffCard({
     ? "Getting location..."
     : isEnding
       ? "Ending shift..."
-      : "Final Dropoff";
+      : "End shift";
 
   const showDeniedHint =
     locationError?.toLowerCase().includes("denied") ||
@@ -92,23 +109,26 @@ export function FinalDropoffCard({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Final dropoff</Text>
+      <Text style={styles.title}>End shift</Text>
       <Text style={styles.subtitle}>
-        Record your current location as the final dropoff. The shift will end
-        after estimated travel time back to your base.
+        Tap the button when you are at your last dropoff. We add one estimated
+        drive from this spot to your home or office base so that leg counts
+        toward your time—time after you tap does not keep adding. Idling or
+        driving around for hours afterward does not add paid time; only that
+        single estimate is applied (at most{" "}
+        {MAX_COMMUTE_ESTIMATE_MINUTES} minutes).
       </Text>
       {!hasBaseLocation && (
         <Text style={styles.warning}>
-          A home or office base must be set by your admin before you can use Final
-          Dropoff. You can see your base on the Profile tab once it is set.
+          A home or office base must be set by your admin before you can end a
+          shift here. You can see your base on the Profile tab once it is set.
         </Text>
       )}
       {locationError ? (
         <View style={styles.errorBanner}>
           <Text style={styles.errorText}>{locationError}</Text>
           <Text style={styles.retryHint}>
-            Tap Final Dropoff again to retry, or open Settings to enable
-            location.
+            Tap End shift again to retry, or open Settings to enable location.
           </Text>
           {showDeniedHint ? (
             <Pressable style={styles.settingsLink} onPress={openSettings}>

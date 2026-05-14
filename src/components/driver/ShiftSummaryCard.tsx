@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import type { ShiftsRow } from "@/types/database";
+import { spacing } from "@/theme/spacing";
 
 interface ShiftSummaryCardProps {
   shift: ShiftsRow;
@@ -43,8 +44,18 @@ function formatSuspiciousReason(reason: string | null): string {
   return labels[reason] ?? reason;
 }
 
+function returnEtaUnavailable(shift: ShiftsRow): boolean {
+  const d = shift.suspicious_details;
+  return (
+    d != null &&
+    typeof d === "object" &&
+    (d as { return_eta_unavailable?: unknown }).return_eta_unavailable === true
+  );
+}
+
 export function ShiftSummaryCard({ shift }: ShiftSummaryCardProps) {
   const isFlagged = shift.flagged_at != null;
+  const etaMissing = returnEtaUnavailable(shift);
 
   return (
     <View style={[styles.card, isFlagged && styles.cardFlagged]}>
@@ -60,8 +71,26 @@ export function ShiftSummaryCard({ shift }: ShiftSummaryCardProps) {
         )}
       </View>
       <Text style={styles.verified}>
-        Verified: {formatMinutes(shift.verified_hours_minutes)}
+        Verified (paid span):{" "}
+        {formatMinutes(shift.verified_hours_minutes)}
       </Text>
+      {shift.estimated_return_minutes != null ? (
+        <>
+          <Text style={styles.returnAudit}>
+            Return-to-base (paid minutes):{" "}
+            <Text style={styles.returnAuditBold}>
+              {shift.estimated_return_minutes} min
+            </Text>{" "}
+            toward saved {shift.return_base_type ?? "base"}
+          </Text>
+          {etaMissing ? (
+            <Text style={styles.returnNote}>
+              Return drive time could not be estimated; recorded as 0 min—paid end
+              time matches last dropoff.
+            </Text>
+          ) : null}
+        </>
+      ) : null}
       <Text style={styles.status}>Status: {formatStatus(shift.status)}</Text>
       {isFlagged && shift.suspicious_reason && (
         <Text style={styles.reason}>
@@ -109,6 +138,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#475569",
     marginBottom: 4,
+  },
+  returnAudit: {
+    fontSize: 13,
+    color: "#64748b",
+    marginBottom: 4,
+  },
+  returnAuditBold: {
+    fontWeight: "600",
+    color: "#475569",
+  },
+  returnNote: {
+    fontSize: 12,
+    color: "#c2410c",
+    marginBottom: spacing.sm,
+    lineHeight: 17,
   },
   status: {
     fontSize: 12,

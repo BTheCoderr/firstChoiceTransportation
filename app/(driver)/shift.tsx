@@ -23,6 +23,7 @@ import {
 import { withTimeout } from "@/utils/withTimeout";
 import { ScreenContainer, ScreenSection } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
+import { useMountedRef } from "@/hooks/useMountedRef";
 
 const REFRESH_ALL_TIMEOUT_MS = 25_000;
 
@@ -69,6 +70,7 @@ export default function DriverShiftScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [hasBaseLocation, setHasBaseLocation] = useState(false);
   const [liveDuration, setLiveDuration] = useState("");
+  const { mountedRef, safeSetState } = useMountedRef();
 
   useEffect(() => {
     if (!activeShift || activeShift.clock_out_at) {
@@ -85,26 +87,41 @@ export default function DriverShiftScreen() {
   }, [activeShift?.id, activeShift?.clock_in_at, activeShift?.clock_out_at]);
 
   useEffect(() => {
-    if (profile?.id) {
-      getDefaultBaseForDriver(profile.id).then((base) =>
-        setHasBaseLocation(!!base)
-      );
-    }
-  }, [profile?.id]);
+    if (!profile?.id) return;
+    void (async () => {
+      try {
+        const base = await getDefaultBaseForDriver(profile.id);
+        safeSetState(() => setHasBaseLocation(!!base));
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [profile?.id, safeSetState]);
 
   /** Sync shared shift state from server + re-check base when Shift tab gains focus (matches Home). */
   useFocusEffect(
     useCallback(() => {
-      void refresh({ silent: true });
-      if (!profile?.id) return;
-      getDefaultBaseForDriver(profile.id).then((base) =>
-        setHasBaseLocation(!!base)
-      );
-    }, [refresh, profile?.id])
+      let active = true;
+      void (async () => {
+        try {
+          await refresh({ silent: true });
+          if (!active || !profile?.id) return;
+          const base = await getDefaultBaseForDriver(profile.id);
+          if (active) {
+            safeSetState(() => setHasBaseLocation(!!base));
+          }
+        } catch {
+          /* ignore */
+        }
+      })();
+      return () => {
+        active = false;
+      };
+    }, [refresh, profile?.id, safeSetState])
   );
 
   const handleRefresh = async () => {
-    setRefreshing(true);
+    safeSetState(() => setRefreshing(true));
     try {
       await Promise.race([
         Promise.all([refresh({ silent: true }), refreshState()]),
@@ -112,18 +129,18 @@ export default function DriverShiftScreen() {
           setTimeout(() => reject(new Error("REFRESH_TIMEOUT")), REFRESH_ALL_TIMEOUT_MS)
         ),
       ]);
-      if (profile?.id) {
+      if (profile?.id && mountedRef.current) {
         const base = await withTimeout(
           getDefaultBaseForDriver(profile.id),
           REFRESH_ALL_TIMEOUT_MS,
           null
         );
-        setHasBaseLocation(!!base);
+        safeSetState(() => setHasBaseLocation(!!base));
       }
     } catch {
       // ensure spinner clears
     } finally {
-      setRefreshing(false);
+      safeSetState(() => setRefreshing(false));
     }
   };
 
@@ -175,8 +192,14 @@ export default function DriverShiftScreen() {
       >
         <Text style={styles.emptyTitle}>No active shift</Text>
         <Text style={styles.emptyText}>
-          Start a shift from the Home screen to continue.
+          Start a shift from the Home tab, or tap below to go there.
         </Text>
+        <Pressable
+          style={styles.goHomeButton}
+          onPress={() => router.replace("/(driver)")}
+        >
+          <Text style={styles.goHomeButtonText}>Go to Home to start shift</Text>
+        </Pressable>
       </ScreenContainer>
     );
   }
@@ -220,6 +243,15 @@ export default function DriverShiftScreen() {
           </Pressable>
         </View>
       )}
+      <ScreenSection title="End your shift">
+        <View style={styles.cardBlock}>
+          <FinalDropoffCard
+            onFinalDropoff={handleFinalDropoff}
+            isEnding={isEnding}
+            hasBaseLocation={hasBaseLocation}
+          />
+        </View>
+      </ScreenSection>
       <ScreenSection title="Shift details">
         <Text style={styles.duration}>
           {activeShift.clock_out_at
@@ -241,14 +273,6 @@ export default function DriverShiftScreen() {
 
       <View style={styles.cardBlock}>
         <LocationTrackingCard shiftId={activeShift.id} tracking={tracking} />
-      </View>
-
-      <View style={styles.cardBlock}>
-        <FinalDropoffCard
-          onFinalDropoff={handleFinalDropoff}
-          isEnding={isEnding}
-          hasBaseLocation={hasBaseLocation}
-        />
       </View>
     </ScreenContainer>
   );
@@ -277,6 +301,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textMuted,
     textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+  goHomeButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
+    backgroundColor: colors.primary,
+    borderRadius: spacing.sm,
+  },
+  goHomeButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   statusSection: {
     marginBottom: spacing.lg,

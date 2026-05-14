@@ -7,9 +7,13 @@ import {
   type StartShiftResult,
 } from "@/services/shifts";
 import { completeShiftWithFinalDropoff } from "@/services/endShift";
-import { stopBackgroundLocationTracking } from "@/services/location";
+import {
+  isLocationTrackingActive,
+  stopBackgroundLocationTracking,
+} from "@/services/location";
 import type { EndShiftResult } from "@/services/endShift";
 import { withTimeout } from "@/utils/withTimeout";
+import { useMountedRef } from "@/hooks/useMountedRef";
 
 const ACTIVE_SHIFT_POLL_INTERVAL_MS = 20_000;
 const FETCH_ACTIVE_SHIFT_TIMEOUT_MS = 15_000;
@@ -22,17 +26,20 @@ export function useDriverShift(driverId: string | undefined) {
   const [isStarting, setIsStarting] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { safeSetState } = useMountedRef();
 
   const refresh = useCallback(
     async (options?: { silent?: boolean }) => {
       const silent = options?.silent === true;
       if (!driverId) {
-        setActiveShift(null);
-        setIsLoading(false);
+        safeSetState(() => {
+          setActiveShift(null);
+          setIsLoading(false);
+        });
         return;
       }
       if (!silent) {
-        setIsLoading(true);
+        safeSetState(() => setIsLoading(true));
       }
       try {
         const shift = await withTimeout(
@@ -40,14 +47,14 @@ export function useDriverShift(driverId: string | undefined) {
           FETCH_ACTIVE_SHIFT_TIMEOUT_MS,
           null as ShiftsRow | null
         );
-        setActiveShift(shift);
+        safeSetState(() => setActiveShift(shift));
       } finally {
         if (!silent) {
-          setIsLoading(false);
+          safeSetState(() => setIsLoading(false));
         }
       }
     },
-    [driverId]
+    [driverId, safeSetState]
   );
 
   useEffect(() => {
@@ -61,8 +68,18 @@ export function useDriverShift(driverId: string | undefined) {
     }
     if (!activeShift || !driverId) return;
     pollRef.current = setInterval(() => {
-      getActiveShiftForDriver(driverId).then((shift) => {
-        setActiveShift(shift);
+      getActiveShiftForDriver(driverId).then(async (shift) => {
+        /** If admin closed the shift server-side or it auto-ended, stop the lingering native tracking task. */
+        if (!shift) {
+          try {
+            if (await isLocationTrackingActive()) {
+              await stopBackgroundLocationTracking();
+            }
+          } catch {
+            // best-effort cleanup
+          }
+        }
+        safeSetState(() => setActiveShift(shift));
       });
     }, ACTIVE_SHIFT_POLL_INTERVAL_MS);
     return () => {
@@ -71,14 +88,14 @@ export function useDriverShift(driverId: string | undefined) {
         pollRef.current = null;
       }
     };
-  }, [activeShift?.id, driverId]);
+  }, [activeShift?.id, driverId, safeSetState]);
 
   const startShiftAction = useCallback(
     async (companyId: string, coords?: StartShiftCoords) => {
       if (!driverId) {
         return { shift: null as ShiftsRow | null, error: null as string | null };
       }
-      setIsStarting(true);
+      safeSetState(() => setIsStarting(true));
       try {
         const result = await withTimeout(
           startShiftService(driverId, companyId, coords),
@@ -86,7 +103,7 @@ export function useDriverShift(driverId: string | undefined) {
           { success: false, error: "INSERT_FAILED" } as StartShiftResult
         );
         if (result.success) {
-          setActiveShift(result.shift);
+          safeSetState(() => setActiveShift(result.shift));
           return { shift: result.shift, error: null };
         }
         const msg =
@@ -95,10 +112,10 @@ export function useDriverShift(driverId: string | undefined) {
             : "Could not start shift. Please try again.";
         return { shift: null, error: msg };
       } finally {
-        setIsStarting(false);
+        safeSetState(() => setIsStarting(false));
       }
     },
-    [driverId]
+    [driverId, safeSetState]
   );
 
   const endShift = useCallback(
@@ -108,9 +125,20 @@ export function useDriverShift(driverId: string | undefined) {
       dropoffLng: number
     ): Promise<EndShiftResult> => {
       if (!driverId) return { success: false, error: "NO_SHIFT" };
-      setIsEnding(true);
+      safeSetState(() => setIsEnding(true));
       try {
+        /** Recorded as `last_dropoff_at` — not the same as paid `clock_out_at` (see endShift service). */
         const dropoffAt = new Date().toISOString();
+        console.info(
+          `[FinalDropoff] ${JSON.stringify({
+            event: "end_shift_invoke",
+            shiftId,
+            driverId,
+            dropoffAt,
+            dropoffLat,
+            dropoffLng,
+          })}`
+        );
         const result = await withTimeout(
           completeShiftWithFinalDropoff(
             shiftId,
@@ -124,14 +152,14 @@ export function useDriverShift(driverId: string | undefined) {
         );
         if (result.success) {
           await stopBackgroundLocationTracking();
-          setActiveShift(null);
+          safeSetState(() => setActiveShift(null));
         }
         return result;
       } finally {
-        setIsEnding(false);
+        safeSetState(() => setIsEnding(false));
       }
     },
-    [driverId]
+    [driverId, safeSetState]
   );
 
   return {

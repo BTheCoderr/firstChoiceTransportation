@@ -12,6 +12,7 @@ import { ShiftSummaryCard } from "@/components/driver/ShiftSummaryCard";
 import { ScreenContainer, ScreenHeadline, Caption } from "@/components/layout";
 import type { ShiftsRow } from "@/types/database";
 import { colors, spacing } from "@/theme/spacing";
+import { useMountedRef } from "@/hooks/useMountedRef";
 
 export default function DriverSummaryScreen() {
   const { profile } = useAuth();
@@ -19,21 +20,31 @@ export default function DriverSummaryScreen() {
   const [shifts, setShifts] = useState<ShiftsRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { safeSetState } = useMountedRef();
 
   const loadShifts = useCallback(async () => {
     if (!driverId) return;
     const data = await getRecentShiftsForDriver(driverId);
-    setShifts(data);
-  }, [driverId]);
+    safeSetState(() => setShifts(data));
+  }, [driverId, safeSetState]);
 
   useEffect(() => {
-    loadShifts().finally(() => setIsLoading(false));
-  }, [loadShifts]);
+    void (async () => {
+      try {
+        await loadShifts();
+      } finally {
+        safeSetState(() => setIsLoading(false));
+      }
+    })();
+  }, [loadShifts, safeSetState]);
 
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadShifts();
-    setRefreshing(false);
+    safeSetState(() => setRefreshing(true));
+    try {
+      await loadShifts();
+    } finally {
+      safeSetState(() => setRefreshing(false));
+    }
   };
 
   if (isLoading) {

@@ -105,14 +105,28 @@ export function LocationTrackingCard({
   };
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
-      const at = await getLastRoutePointRecordedAt(shiftId);
-      setLastRecordedAt(at);
+      try {
+        const at = await getLastRoutePointRecordedAt(shiftId);
+        if (!cancelled) {
+          setLastRecordedAt(at);
+        }
+      } catch {
+        /* ignore */
+      }
     };
-    load();
-    if (!isTracking) return;
-    const id = setInterval(load, LAST_POINT_POLL_INTERVAL_MS);
-    return () => clearInterval(id);
+    void load();
+    if (!isTracking) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const id = setInterval(() => void load(), LAST_POINT_POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
   }, [shiftId, isTracking]);
 
   /**

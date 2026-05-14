@@ -54,8 +54,25 @@ export async function startShift(
     .select()
     .single();
 
-  if (error || !data) return { success: false, error: "INSERT_FAILED" };
+  if (error || !data) {
+    /** Partial unique index `idx_one_active_shift_per_driver` (migration 014) raises 23505 */
+    /** when another device created an active shift between our pre-check and this insert. */
+    if (isDuplicateActiveShiftError(error)) {
+      return { success: false, error: "ALREADY_ACTIVE" };
+    }
+    return { success: false, error: "INSERT_FAILED" };
+  }
   return { success: true, shift: data as ShiftsRow };
+}
+
+function isDuplicateActiveShiftError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown };
+  if (e.code === "23505") return true;
+  return (
+    typeof e.message === "string" &&
+    e.message.toLowerCase().includes("idx_one_active_shift_per_driver")
+  );
 }
 
 export async function getRecentShiftsForDriver(

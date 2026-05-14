@@ -1,11 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs, usePathname, useRouter, useSegments } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { mainHeaderScreenOptions } from "@/navigation/mainHeaderOptions";
 import { ShiftLocationProvider } from "@/providers/ShiftLocationProvider";
 import { DriverShiftProvider } from "@/providers/DriverShiftProvider";
 import { colors } from "@/theme/spacing";
+import {
+  pathnameIsRootIndex,
+  pathnameMatchesAdmin,
+  pathnameMatchesAuth,
+} from "@/navigation/routeGuards";
 
 /**
  * Driver tabs only for profile role `driver`. Admins redirect to `/(admin)`.
@@ -13,18 +18,34 @@ import { colors } from "@/theme/spacing";
  */
 export default function DriverLayout() {
   const router = useRouter();
-  const { role, isLoading, profileLoading } = useAuth();
+  const pathname = usePathname();
+  const segments = useSegments();
+  const segmentKey = segments.join("/");
+  const { role, user, isLoading, profileLoading } = useAuth();
 
   useEffect(() => {
     if (isLoading || profileLoading) return;
+
     if (role === "admin") {
-      router.replace("/(admin)");
+      if (!pathnameMatchesAdmin(pathname)) router.replace("/(admin)");
       return;
     }
     if (role !== "driver") {
-      router.replace("/");
+      if (!user) {
+        if (!pathnameMatchesAuth(pathname)) router.replace("/(auth)");
+      } else if (!pathnameMatchesAuth(pathname) && !pathnameIsRootIndex(pathname)) {
+        router.replace("/");
+      }
     }
-  }, [role, isLoading, profileLoading, router]);
+  }, [role, user, isLoading, profileLoading, segmentKey, pathname, router]);
+
+  const tabScreenOptions = useMemo(
+    () => ({
+      ...mainHeaderScreenOptions,
+      freezeOnBlur: false,
+    }),
+    []
+  );
 
   const showShell =
     !isLoading && !profileLoading && role === "driver";
@@ -41,9 +62,8 @@ export default function DriverLayout() {
     <ShiftLocationProvider>
       <DriverShiftProvider>
       <Tabs
-        screenOptions={{
-          ...mainHeaderScreenOptions,
-        }}
+        detachInactiveScreens={false}
+        screenOptions={tabScreenOptions}
       >
         <Tabs.Screen
           name="index"
