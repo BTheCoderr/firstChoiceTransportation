@@ -71,6 +71,7 @@ export default function AdminLayout() {
       <Stack.Screen name="weekly" options={adminStackScreenOptions} />
       <Stack.Screen name="driver/[id]" options={adminStackScreenOptions} />
       <Stack.Screen name="shift/[id]" options={adminStackScreenOptions} />
+      <Stack.Screen name="diagnostics" options={adminStackScreenOptions} />
     </Stack>
   );
 }

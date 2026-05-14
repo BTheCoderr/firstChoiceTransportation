@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Pressable,
+} from "react-native";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { getDriverBaseSettings } from "@/services/driverBases";
 import {
@@ -12,6 +19,7 @@ import { colors, radii, spacing } from "@/theme/spacing";
 import { useMountedRef } from "@/hooks/useMountedRef";
 
 export default function DriverProfileScreen() {
+  const router = useRouter();
   const { profile } = useAuth();
   const driverId = profile?.id;
   const [settings, setSettings] = useState<DriverBaseSettings | null>(null);
@@ -98,6 +106,14 @@ export default function DriverProfileScreen() {
           </Text>
         </View>
       )}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open diagnostics and build info"
+        style={styles.diagnosticsLink}
+        onPress={() => router.push("./diagnostics")}
+      >
+        <Text style={styles.diagnosticsLinkText}>Diagnostics & build info</Text>
+      </Pressable>
     </ScreenContainer>
   );
 }
@@ -152,5 +168,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#a16207",
     lineHeight: 20,
+  },
+  diagnosticsLink: {
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+  },
+  diagnosticsLinkText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

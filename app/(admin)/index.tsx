@@ -116,6 +116,14 @@ export default function AdminDashboardScreen() {
           )}
         </>
       )}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open diagnostics and build info"
+        style={styles.diagnosticsFoot}
+        onPress={() => router.push("./diagnostics")}
+      >
+        <Text style={styles.diagnosticsFootText}>Diagnostics & build info</Text>
+      </Pressable>
     </ScreenContainer>
   );
 }
@@ -196,5 +204,16 @@ const styles = StyleSheet.create({
   },
   cardList: {
     gap: spacing.cardGap,
+  },
+  diagnosticsFoot: {
+    marginTop: spacing.xxl,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+  },
+  diagnosticsFootText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

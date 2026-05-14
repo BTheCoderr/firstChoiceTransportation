@@ -26,7 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     /** CFBundleVersion — bump each App Store / TestFlight upload (EAS `autoIncrement` is unsupported with app.config.ts). */
-    buildNumber: "24",
+    buildNumber: "25",
     bundleIdentifier: "com.firstchoicetransportation.timesheet",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -41,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     /** Increment for each Play Store upload; keep in step with iOS buildNumber when possible. */
-    versionCode: 24,
+    versionCode: 25,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
@@ -83,5 +83,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? "",
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",
+    /** EAS injects GIT commit at build when available — also overridable via EXPO_PUBLIC_GIT_COMMIT */
+    gitCommitHash:
+      (process.env.EXPO_PUBLIC_GIT_COMMIT ?? "").trim() ||
+      (process.env.EAS_BUILD_GIT_COMMIT_HASH ?? "").trim() ||
+      "",
   },
 });

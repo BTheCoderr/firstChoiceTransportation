@@ -93,6 +93,14 @@ export default function DriverLayout() {
             tabBarLabel: "Profile",
           }}
         />
+        <Tabs.Screen
+          name="diagnostics"
+          options={{
+            title: "Diagnostics",
+            tabBarLabel: "Diagnostics",
+            href: null,
+          }}
+        />
       </Tabs>
       </DriverShiftProvider>
     </ShiftLocationProvider>

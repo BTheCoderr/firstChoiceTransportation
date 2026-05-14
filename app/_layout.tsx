@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { iosNativeStackMitigation } from "@/navigation/iosNativeStackOptions";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 import { AuthProvider } from "@/providers/AuthProvider";
 // Deferred: backgroundLocationTask is imported in location.ts when tracking starts.
 // Importing it at startup can trigger TurboModule crashes on iOS 26.
@@ -20,10 +21,12 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <StatusBar style="auto" />
-        <Stack screenOptions={rootStackScreenOptions} />
-      </AuthProvider>
+      <AppErrorBoundary>
+        <AuthProvider>
+          <StatusBar style="auto" />
+          <Stack screenOptions={rootStackScreenOptions} />
+        </AuthProvider>
+      </AppErrorBoundary>
     </SafeAreaProvider>
   );
 }

@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { spacing } from "@/theme/spacing";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -8,12 +9,25 @@ import { useAuth } from "@/hooks/useAuth";
  * Avoids competing `router.replace` calls with layout guards (max update depth).
  */
 export function LogoutButton() {
+  const signingOutRef = useRef(false);
   const { signOut } = useAuth();
+
+  const handlePress = () => {
+    if (signingOutRef.current) return;
+    signingOutRef.current = true;
+    void (async () => {
+      try {
+        await signOut();
+      } finally {
+        signingOutRef.current = false;
+      }
+    })();
+  };
 
   return (
     <Pressable
       style={styles.button}
-      onPress={() => void signOut()}
+      onPress={handlePress}
       accessibilityLabel="Log out"
       accessibilityRole="button"
     >
