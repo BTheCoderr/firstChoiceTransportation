@@ -24,7 +24,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     /** CFBundleVersion — bump each App Store / TestFlight upload (EAS `autoIncrement` is unsupported with app.config.ts). */
-    buildNumber: "21",
+    buildNumber: "22",
     bundleIdentifier: "com.firstchoicetransportation.timesheet",
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
@@ -39,7 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     /** Increment for each Play Store upload; keep in step with iOS buildNumber when possible. */
-    versionCode: 21,
+    versionCode: 22,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
