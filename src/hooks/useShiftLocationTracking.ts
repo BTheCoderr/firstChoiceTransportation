@@ -422,12 +422,12 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
   }, [refreshState]);
 
   useEffect(() => {
-    if (state.flow !== "error") return;
+    if (!state.isTracking && state.flow !== "error") return;
     const id = setInterval(() => {
       void refreshState();
     }, TRACKING_ERROR_POLL_INTERVAL_MS);
     return () => clearInterval(id);
-  }, [state.flow, refreshState]);
+  }, [state.isTracking, state.flow, refreshState]);
 
   const runLocked = useCallback(
     async (
