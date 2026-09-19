@@ -202,7 +202,6 @@ function reducer(state: TrackingState, action: Action): TrackingState {
             hasBackgroundPermission: bgG,
             isTracking: false,
             trackingShiftId: null,
-            taskErrorMessage: null,
           };
         }
       }
