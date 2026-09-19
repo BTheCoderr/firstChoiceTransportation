@@ -193,6 +193,15 @@ export function LocationTrackingCard({
         </View>
       ) : null}
 
+      {isTracking && trackingFlowStatus === "error" && errorMessage ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+          <Text style={styles.errorHint}>
+            Tracking is still running. This warning clears after the next successful route upload.
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.row}>
         <Text style={styles.label}>Foreground:</Text>
         <Text style={styles.value}>

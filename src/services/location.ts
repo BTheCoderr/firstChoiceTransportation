@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import {
   LOCATION_TASK_NAME,
   TRACKING_SHIFT_ID_KEY,
+  TRACKING_LAST_ERROR_KEY,
   LOCATION_UPDATE_INTERVAL_MS,
   LOCATION_DISTANCE_INTERVAL_M,
   LOCATION_REQUEST_TIMEOUT_MS,
@@ -223,7 +224,10 @@ export async function startBackgroundLocationTracking(
       ),
     ]);
 
-    await SecureStore.setItemAsync(TRACKING_SHIFT_ID_KEY, shiftId);
+    await Promise.all([
+      SecureStore.setItemAsync(TRACKING_SHIFT_ID_KEY, shiftId),
+      SecureStore.deleteItemAsync(TRACKING_LAST_ERROR_KEY),
+    ]);
 
     const [fg, bg] = await Promise.all([
       getForegroundPermissionState(),
@@ -231,7 +235,10 @@ export async function startBackgroundLocationTracking(
     ]);
     if (fg.state !== "granted" || bg.state !== "granted") {
       try {
-        await SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY);
+        await Promise.all([
+          SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY),
+          SecureStore.deleteItemAsync(TRACKING_LAST_ERROR_KEY),
+        ]);
       } catch {
         // best effort — avoid orphaned shift id when we bail before starting updates
       }
@@ -260,6 +267,14 @@ export async function startBackgroundLocationTracking(
 
     return true;
   } catch {
+    try {
+      await Promise.all([
+        SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY),
+        SecureStore.deleteItemAsync(TRACKING_LAST_ERROR_KEY),
+      ]);
+    } catch {
+      // Best effort cleanup after a failed start.
+    }
     return false;
   }
 }
@@ -267,9 +282,17 @@ export async function startBackgroundLocationTracking(
 export async function stopBackgroundLocationTracking(): Promise<void> {
   try {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
-    await SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY);
   } catch {
-    // Best effort cleanup
+    // Native task may already be stopped; local cleanup must still run.
+  }
+
+  try {
+    await Promise.all([
+      SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY),
+      SecureStore.deleteItemAsync(TRACKING_LAST_ERROR_KEY),
+    ]);
+  } catch {
+    // Best effort SecureStore cleanup.
   }
 }
 

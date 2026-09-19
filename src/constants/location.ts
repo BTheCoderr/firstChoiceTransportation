@@ -6,6 +6,9 @@ export const LOCATION_TASK_NAME = "BACKGROUND_LOCATION_TASK";
 
 export const TRACKING_SHIFT_ID_KEY = "active_tracking_shift_id";
 
+/** Last background tracking/upload error persisted for the foreground UI. */
+export const TRACKING_LAST_ERROR_KEY = "active_tracking_last_error";
+
 /** Minimum interval between location updates (ms) */
 export const LOCATION_UPDATE_INTERVAL_MS = 30_000;
 

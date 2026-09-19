@@ -13,6 +13,7 @@ import {
 import {
   LOCATION_PERMISSION_DIALOG_TIMEOUT_MS,
   TRACKING_SHIFT_ID_KEY,
+  TRACKING_LAST_ERROR_KEY,
 } from "@/constants/location";
 import * as SecureStore from "expo-secure-store";
 import { withTimeout } from "@/utils/withTimeout";
@@ -36,6 +37,7 @@ const START_TRACKING_PIPELINE_MAX_MS =
 /** Prevents refreshState / SecureStore from hanging the tracking lock forever. */
 const REFRESH_STATE_MAX_MS = 15_000;
 const SECURE_STORE_READ_MAX_MS = 5_000;
+const TRACKING_ERROR_POLL_INTERVAL_MS = 15_000;
 /** Each isLocationTrackingActive poll must settle (withTimeout fallback). */
 const NATIVE_ACTIVE_POLL_CALL_MS = 8_000;
 
@@ -62,6 +64,7 @@ type Action =
       bg: PermissionGateState;
       nativeTracking: boolean;
       trackingShiftId: string | null;
+      taskErrorMessage: string | null;
     };
 
 function deriveFlowFromPermissions(
@@ -107,9 +110,25 @@ function reducer(state: TrackingState, action: Action): TrackingState {
       return { ...state, flow: nextFlow, errorMessage: null };
     }
     case "SNAPSHOT": {
-      const { fg, bg, nativeTracking, trackingShiftId } = action;
+      const { fg, bg, nativeTracking, trackingShiftId, taskErrorMessage } = action;
       const fgG = fg === "granted";
       const bgG = bg === "granted";
+
+      if (taskErrorMessage) {
+        return {
+          ...state,
+          permissionReady: true,
+          foregroundPermission: fg,
+          backgroundPermission: bg,
+          hasForegroundPermission: fgG,
+          hasBackgroundPermission: bgG,
+          isTracking: nativeTracking,
+          trackingShiftId: nativeTracking ? trackingShiftId : null,
+          flow: "error",
+          errorMessage: taskErrorMessage,
+          opKind: "none",
+        };
+      }
 
       if (nativeTracking) {
         return {
@@ -301,15 +320,21 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
       bg: PermissionGateState;
       nativeTracking: boolean;
       trackingShiftId: string | null;
+      taskErrorMessage: string | null;
     };
 
     const outcome = await withTimeout(
       (async (): Promise<Snap | null | "TIMEOUT"> => {
         try {
-          const [fg, bg, active] = await Promise.all([
+          const [fg, bg, active, trackingErrorRaw] = await Promise.all([
             getForegroundPermissionState(),
             getBackgroundPermissionState(),
             isLocationTrackingActive(),
+            withTimeout(
+              SecureStore.getItemAsync(TRACKING_LAST_ERROR_KEY),
+              SECURE_STORE_READ_MAX_MS,
+              null
+            ),
           ]);
           if (gen !== refreshGenRef.current) return null;
 
@@ -324,11 +349,24 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
 
           if (gen !== refreshGenRef.current) return null;
 
+          let taskErrorMessage: string | null = null;
+          if (trackingErrorRaw) {
+            try {
+              const parsed = JSON.parse(trackingErrorRaw) as { message?: unknown };
+              if (typeof parsed.message === "string" && parsed.message.trim()) {
+                taskErrorMessage = parsed.message.trim();
+              }
+            } catch {
+              taskErrorMessage = "Route tracking reported a recent background error.";
+            }
+          }
+
           return {
             fg: fg.state,
             bg: bg.state,
             nativeTracking: active,
             trackingShiftId: tid,
+            taskErrorMessage,
           };
         } catch {
           if (gen !== refreshGenRef.current) return null;
@@ -337,6 +375,7 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
             bg: "unavailable",
             nativeTracking: false,
             trackingShiftId: null,
+            taskErrorMessage: null,
           };
         }
       })(),
@@ -352,6 +391,7 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
           bg: "unavailable",
           nativeTracking: false,
           trackingShiftId: null,
+          taskErrorMessage: null,
         });
       }
       return false;
@@ -365,6 +405,7 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
       bg: outcome.bg,
       nativeTracking: outcome.nativeTracking,
       trackingShiftId: outcome.trackingShiftId,
+      taskErrorMessage: outcome.taskErrorMessage,
     });
     return true;
   }, []);
@@ -379,6 +420,14 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
     });
     return () => sub.remove();
   }, [refreshState]);
+
+  useEffect(() => {
+    if (!state.isTracking && state.flow !== "error") return;
+    const id = setInterval(() => {
+      void refreshState();
+    }, TRACKING_ERROR_POLL_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [state.isTracking, state.flow, refreshState]);
 
   const runLocked = useCallback(
     async (
@@ -503,7 +552,11 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
 
   const clearTrackingError = useCallback(() => {
     dispatch({ type: "CLEAR_ERROR" });
-    void refreshState();
+    void SecureStore.deleteItemAsync(TRACKING_LAST_ERROR_KEY)
+      .catch(() => {})
+      .finally(() => {
+        void refreshState();
+      });
   }, [refreshState]);
 
   return {
