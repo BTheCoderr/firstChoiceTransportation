@@ -267,6 +267,14 @@ export async function startBackgroundLocationTracking(
 
     return true;
   } catch {
+    try {
+      await Promise.all([
+        SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY),
+        SecureStore.deleteItemAsync(TRACKING_LAST_ERROR_KEY),
+      ]);
+    } catch {
+      // Best effort cleanup after a failed start.
+    }
     return false;
   }
 }
@@ -274,12 +282,17 @@ export async function startBackgroundLocationTracking(
 export async function stopBackgroundLocationTracking(): Promise<void> {
   try {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+  } catch {
+    // Native task may already be stopped; local cleanup must still run.
+  }
+
+  try {
     await Promise.all([
       SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY),
       SecureStore.deleteItemAsync(TRACKING_LAST_ERROR_KEY),
     ]);
   } catch {
-    // Best effort cleanup
+    // Best effort SecureStore cleanup.
   }
 }
 
