@@ -33,7 +33,7 @@ BEGIN
     flagged_at = COALESCE(flagged_at, now())
   WHERE clock_out_at IS NULL
     AND clock_in_at < now() - interval '16 hours'
-    AND COALESCE((suspicious_details ->> 'abandoned_shift')::boolean, false) = false;
+    AND COALESCE(suspicious_details ->> 'abandoned_shift', 'false') <> 'true';
 
   GET DIAGNOSTICS affected = ROW_COUNT;
   RETURN affected;
