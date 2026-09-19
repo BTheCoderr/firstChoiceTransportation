@@ -376,6 +376,7 @@ export function useShiftLocationTracking(): UseShiftLocationTrackingResult {
             bg: "unavailable",
             nativeTracking: false,
             trackingShiftId: null,
+            taskErrorMessage: null,
           };
         }
       })(),
