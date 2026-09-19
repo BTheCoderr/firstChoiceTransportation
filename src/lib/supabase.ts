@@ -33,26 +33,21 @@ const rawKey = (
 ).trim();
 
 /** Exported for Edge Function calls that need a direct `fetch` with explicit headers. */
-export const supabaseUrl =
-  rawUrl || (__DEV__ ? DEV_FALLBACK_URL : "");
+export const isSupabaseConfigured = Boolean(rawUrl && rawKey);
+
+export const supabaseUrl = rawUrl || DEV_FALLBACK_URL;
 /**
  * Use the legacy **anon JWT** (starts with `eyJ`) from Dashboard → API Keys →
  * "Legacy anon, service_role API keys". New **publishable** keys (`sb_publishable_…`)
  * can trigger **401** on `functions/v1/*` while JWT verification is enabled on the gateway.
  */
-export const supabaseAnonKey =
-  rawKey || (__DEV__ ? DEV_FALLBACK_ANON_KEY : "");
+export const supabaseAnonKey = rawKey || DEV_FALLBACK_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    "Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. Copy env.sample to .env, set both values from Supabase → API, then restart Expo."
-  );
-}
-
-if (__DEV__ && (!rawUrl || !rawKey)) {
-  console.warn(
-    "[Supabase] .env is missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY — using dev placeholders. Copy env.sample to .env, add real values, restart Metro."
-  );
+if (!isSupabaseConfigured) {
+  const message =
+    "[Supabase] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY. The app will show a configuration screen instead of crashing at module load.";
+  if (__DEV__) console.warn(message);
+  else console.error(message);
 }
 
 /** TEMP: debug — anon key shape only, never log the full key. */
