@@ -8,21 +8,41 @@ export interface StartShiftCoords {
   lng: number;
 }
 
+export type ActiveShiftLookup =
+  | { ok: true; shift: ShiftsRow | null }
+  | { ok: false; shift: null };
+
+/**
+ * Distinguish a confirmed absence of an open shift from a network failure.
+ * Never stop GPS monitoring merely because a Supabase request failed.
+ */
+export async function lookupActiveShiftForDriver(
+  driverId: string
+): Promise<ActiveShiftLookup> {
+  try {
+    const { data, error } = await supabase
+      .from("shifts")
+      .select("*")
+      .eq("driver_id", driverId)
+      .in("status", ACTIVE_STATUSES)
+      .is("clock_out_at", null)
+      .order("clock_in_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) return { ok: false, shift: null };
+    return { ok: true, shift: data ? (data as ShiftsRow) : null };
+  } catch {
+    return { ok: false, shift: null };
+  }
+}
+
+/** Compatibility wrapper: use lookupActiveShiftForDriver when making decisions about GPS. */
 export async function getActiveShiftForDriver(
   driverId: string
 ): Promise<ShiftsRow | null> {
-  const { data, error } = await supabase
-    .from("shifts")
-    .select("*")
-    .eq("driver_id", driverId)
-    .in("status", ACTIVE_STATUSES)
-    .is("clock_out_at", null)
-    .order("clock_in_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (error || !data) return null;
-  return data as ShiftsRow;
+  const result = await lookupActiveShiftForDriver(driverId);
+  return result.ok ? result.shift : null;
 }
 
 export type StartShiftResult =
