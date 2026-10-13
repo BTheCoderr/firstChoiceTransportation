@@ -121,7 +121,11 @@ export function useDriverShift(driverId: string | undefined) {
         const msg =
           result.error === "ALREADY_ACTIVE"
             ? "You already have an active shift."
-            : "Could not start shift. Please try again.";
+            : result.error === "ONBOARDING_REQUIRED"
+              ? "Complete your driver profile before clocking in."
+              : result.error === "APPROVED_GPS_BASE_REQUIRED"
+                ? "Ask your administrator to save your approved Home or Office GPS location."
+                : "Could not start shift. Please try again.";
         return { shift: null, error: msg };
       } finally {
         safeSetState(() => setIsStarting(false));
