@@ -9,13 +9,19 @@ import type {
 import type { AdminDriverListItem, DriverBaseSettings } from "@/types/app";
 import { getDriverBaseSettings } from "@/services/driverBases";
 
-/** Get Monday of the week for a given date (YYYY-MM-DD) */
+/** UTC Monday boundary, shared by dashboard and driver detail. */
 function getWeekStart(date: Date): string {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split("T")[0];
+  const day = date.getUTCDay();
+  const mondayOffset = (day + 6) % 7;
+  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - mondayOffset));
+  return monday.toISOString().slice(0, 10);
+}
+
+/** Exclusive end at next Monday, not 23:59 on the current Monday. */
+function getWeekEndExclusive(weekStart: string): string {
+  const next = new Date(`${weekStart}T00:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + 7);
+  return next.toISOString();
 }
 
 export interface DriverWithWeeklyStats extends AdminDriverListItem {}
@@ -54,7 +60,7 @@ export async function getCompanyDriversWithWeeklyStats(
   companyId: string
 ): Promise<DriverWithWeeklyStats[]> {
   const weekStart = getWeekStart(new Date());
-  const weekEnd = `${weekStart}T23:59:59`;
+  const weekEnd = getWeekEndExclusive(weekStart);
 
   const { data: profilesData, error: profilesError } = await supabase
     .from("profiles")
@@ -71,7 +77,7 @@ export async function getCompanyDriversWithWeeklyStats(
     .eq("company_id", companyId)
     .in("status", ["completed", "flagged"])
     .gte("clock_in_at", `${weekStart}T00:00:00`)
-    .lte("clock_in_at", weekEnd);
+    .lt("clock_in_at", weekEnd);
 
   if (shiftsError) return [];
 
@@ -162,7 +168,7 @@ export async function getDriverDetail(
   const profile = profileData as ProfilesRow;
 
   const weekStart = getWeekStart(new Date());
-  const weekEnd = `${weekStart}T23:59:59`;
+  const weekEnd = getWeekEndExclusive(weekStart);
 
   const [baseSettings, shiftsRes, weeklyRes] = await Promise.all([
     getDriverBaseSettings(driverId),
@@ -180,7 +186,7 @@ export async function getDriverDetail(
       .eq("company_id", SINGLE_COMPANY_ID)
       .in("status", ["completed", "flagged"])
       .gte("clock_in_at", `${weekStart}T00:00:00`)
-      .lte("clock_in_at", weekEnd),
+      .lt("clock_in_at", weekEnd),
   ]);
   const recentShifts = (shiftsRes.data ?? []) as ShiftsRow[];
   const weeklyShifts = weeklyRes.data ?? [];
