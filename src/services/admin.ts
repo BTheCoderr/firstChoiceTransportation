@@ -144,6 +144,38 @@ export async function getOpenCompanyShifts(
   }));
 }
 
+/** Separate backlog: don't hide payroll-pending closures behind a recent-15 limit. */
+export async function getPendingCompanyPayrollShifts(
+  companyId: string,
+  limit = 100
+): Promise<RecentShiftWithDriver[]> {
+  const { data: rows, error } = await supabase
+    .from("shifts")
+    .select("*")
+    .eq("company_id", companyId)
+    .not("clock_out_at", "is", null)
+    .is("verified_hours_minutes", null)
+    .contains("suspicious_details", { shift_recovery: "closed_pending_payroll_review" })
+    .order("clock_out_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error("PENDING_PAYROLL_QUERY_FAILED");
+  if (!rows?.length) return [];
+  const shifts = rows as ShiftsRow[];
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", [...new Set(shifts.map((s) => s.driver_id))]);
+  if (profilesError) throw new Error("PENDING_PAYROLL_DRIVERS_QUERY_FAILED");
+  const names = new Map(
+    (profiles ?? []).map((p) => [p.id, { name: p.full_name, email: p.email }])
+  );
+  return shifts.map((shift) => ({
+    shift,
+    driverName: names.get(shift.driver_id)?.name ?? "Unknown",
+    driverEmail: names.get(shift.driver_id)?.email ?? "",
+  }));
+}
+
 /**
  * Get recent completed shifts for a company.
  */
