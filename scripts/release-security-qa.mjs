@@ -12,6 +12,7 @@ const shiftServiceSource = read("src/services/shifts.ts");
 const endShiftSource = read("src/services/endShift.ts");
 const routePolicySource = read("supabase/migrations/021_limit_route_points_to_open_shifts.sql");
 const adminServiceSource = read("src/services/admin.ts");
+const geofenceSource = read("supabase/migrations/022_gps_auto_clockout_staged.sql");
 const eas = JSON.parse(read("eas.json"));
 const config = read("app.config.ts");
 const nav = read("web/src/components/Nav.tsx");
@@ -37,6 +38,10 @@ assert.match(routePolicySource, /s.clock_out_at IS NULL/, "GPS uploads must be l
 assert.match(adminServiceSource, /getWeekEndExclusive\(weekStart\)/, "Weekly report must end at next Monday");
 assert.match(adminServiceSource, /\.lt\("clock_in_at", weekEnd\)/, "Weekly report must use exclusive full-week end");
 assert.doesNotMatch(adminServiceSource, /T23:59:59/, "Do not end weekly report on its first day");
+assert.match(geofenceSource, /enabled boolean NOT NULL DEFAULT false/, "Auto clock-out must remain disabled until native rollout");
+assert.match(geofenceSource, /clock_out_method','gps_confirmed_base_arrival'/, "Arrival-based auto clock-out must retain audit method");
+assert.match(geofenceSource, /dwell_seconds integer NOT NULL DEFAULT 180/, "GPS dwell requirement must be defined");
+assert.match(geofenceSource, /lower\(trim\(b.name\)\) IN \('home', 'office'\)/, "Both registered bases can confirm return");
 assert.equal(eas.cli.appVersionSource, "remote", "Versioning should be managed by EAS");
 assert.equal(eas.build.production.autoIncrement, true, "Release builds must advance build number");
 assert.doesNotMatch(config, /buildNumber:|versionCode:/, "Static build numbers must not conflict with remote versions");
