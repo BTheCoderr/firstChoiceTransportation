@@ -28,12 +28,12 @@ export async function flagShiftAsSuspicious(input: FlagShiftInput): Promise<void
 
   const { data: existing } = await supabase
     .from("shifts")
-    .select("flagged_at")
+    .select("flagged_at, clock_out_at")
     .eq("id", shiftId)
     .single();
 
-  const existingRow = existing as Pick<ShiftsRow, "flagged_at"> | null;
-  if (existingRow?.flagged_at) return;
+  const existingRow = existing as Pick<ShiftsRow, "flagged_at" | "clock_out_at"> | null;
+  if (!existingRow || existingRow.flagged_at || existingRow.clock_out_at) return;
 
   const update = {
     suspicious_reason: reason,
@@ -41,7 +41,8 @@ export async function flagShiftAsSuspicious(input: FlagShiftInput): Promise<void
     flagged_at: new Date().toISOString(),
     status: "flagged",
   };
-  await supabase.from("shifts").update(update as never).eq("id", shiftId);
+  await supabase.from("shifts").update(update as never).eq("id", shiftId)
+    .is("clock_out_at", null);
 }
 
 /**
