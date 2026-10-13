@@ -248,7 +248,7 @@ export async function createDriver(
     };
   }
 
-  let parsed: { success?: boolean; error?: string; userId?: string; email?: string };
+  let parsed: { success?: boolean; error?: string; userId?: string; email?: string; activationEmailSent?: boolean; message?: string };
   try {
     parsed = rawText ? JSON.parse(rawText) : {};
   } catch {
@@ -280,6 +280,8 @@ export async function createDriver(
       success: true,
       userId: parsed.userId,
       email: parsed.email,
+      activationEmailSent: parsed.activationEmailSent,
+      message: parsed.message,
     };
   }
   if (__DEV__) {
