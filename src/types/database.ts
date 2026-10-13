@@ -282,7 +282,7 @@ type TableDef<R, I, U> = {
   Row: R;
   Insert: I;
   Update: U;
-  Relationships: unknown[];
+  Relationships: [];
 };
 
 export interface Database {
@@ -301,6 +301,12 @@ export interface Database {
       >;
     };
     Views: Record<string, never>;
+    Enums: {
+      user_role: UserRole;
+      shift_status: ShiftStatus;
+      stop_type: StopType;
+    };
+    CompositeTypes: Record<string, never>;
     Functions: {
       ensure_profile: {
         Args: Record<string, never>;
