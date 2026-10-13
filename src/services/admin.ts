@@ -127,7 +127,8 @@ export async function getOpenCompanyShifts(
     .order("clock_in_at", { ascending: true })
     .limit(limit);
 
-  if (error || !rows?.length) return [];
+  if (error) throw new Error("OPEN_SHIFT_QUERY_FAILED");
+  if (!rows?.length) return [];
   const shifts = rows as ShiftsRow[];
   const { data: profiles } = await supabase
     .from("profiles")
