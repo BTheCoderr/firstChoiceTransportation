@@ -14,7 +14,7 @@ import { useDriverLocation } from "@/providers/ShiftLocationProvider";
 import { LocationStatusCard } from "@/components/driver/LocationStatusCard";
 import { LocationTrackingCard } from "@/components/driver/LocationTrackingCard";
 import { MovementStatusCard } from "@/components/driver/MovementStatusCard";
-import { FinalDropoffCard } from "@/components/driver/FinalDropoffCard";
+import { AutoClockOutCard } from "@/components/driver/AutoClockOutCard";
 import { getDefaultBaseForDriver } from "@/services/driverBases";
 import {
   formatDurationMinutes,
@@ -243,13 +243,9 @@ export default function DriverShiftScreen() {
           </Pressable>
         </View>
       )}
-      <ScreenSection title="End your shift">
+      <ScreenSection title="Automatic GPS clock-out">
         <View style={styles.cardBlock}>
-          <FinalDropoffCard
-            onFinalDropoff={handleFinalDropoff}
-            isEnding={isEnding}
-            hasBaseLocation={hasBaseLocation}
-          />
+          <AutoClockOutCard hasApprovedBase={hasBaseLocation} trackingActive={isTracking} />
         </View>
       </ScreenSection>
       <ScreenSection title="Shift details">
