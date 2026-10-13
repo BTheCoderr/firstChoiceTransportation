@@ -12,6 +12,7 @@ import { useLocalSearchParams } from "expo-router";
 import { getShiftDetail } from "@/services/admin";
 import type { ShiftDetailResult } from "@/services/admin";
 import { LocationWithAddress } from "@/components/admin/LocationWithAddress";
+import { AdminShiftRecoveryPanel } from "@/components/admin/AdminShiftRecoveryPanel";
 import { getMapsDirectionsUrl } from "@/services/geocoding";
 import { ScreenContainer, ScreenSection } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
@@ -145,6 +146,7 @@ export default function AdminShiftDetailScreen() {
     driverName,
     driverEmail,
     routePoints,
+    reviewEvents,
     routePointsCount,
     clientStopsCount,
   } = data;
@@ -184,6 +186,17 @@ export default function AdminShiftDetailScreen() {
         <Text style={styles.driverName}>{driverName}</Text>
         <Text style={styles.driverEmail}>{driverEmail}</Text>
       </ScreenSection>
+
+      {(shift.clock_out_at === null || reviewEvents.length > 0) && (
+        <ScreenSection title="Shift recovery and audit">
+          <AdminShiftRecoveryPanel
+            shift={shift}
+            routePoints={routePoints}
+            reviewEvents={reviewEvents}
+            onChanged={async () => { await load(); }}
+          />
+        </ScreenSection>
+      )}
 
       <ScreenSection title="Times">
         <View style={styles.card}>
