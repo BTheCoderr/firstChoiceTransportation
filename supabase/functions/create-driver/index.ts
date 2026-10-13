@@ -17,20 +17,6 @@ interface CreateDriverRequest {
   home_base_longitude?: number | null;
 }
 
-function getUserIdFromJwt(jwt: string): string | null {
-  try {
-    const parts = jwt.split(".");
-    if (parts.length !== 3) return null;
-    let base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const pad = base64.length % 4;
-    if (pad) base64 += "=".repeat(4 - pad);
-    const payload = JSON.parse(atob(base64));
-    return payload.sub ?? null;
-  } catch {
-    return null;
-  }
-}
-
 function jsonResponse(body: object, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -43,17 +29,19 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return jsonResponse({ success: false, error: "Method not allowed" }, 405);
+  }
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return jsonResponse({ success: false, error: "Missing or invalid authorization" }, 200);
     }
 
-    const token = authHeader.replace("Bearer ", "");
-    const callerId = getUserIdFromJwt(token);
-    if (!callerId) {
-      return jsonResponse({ success: false, error: "Invalid token" }, 200);
-    }
+    // verify_jwt is disabled at the gateway for modern access tokens.
+    // Never trust decoded JWT claims here: verify the token with Supabase Auth.
+    const token = authHeader.slice("Bearer ".length).trim();
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
     /**
@@ -78,7 +66,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    const callerId = authData.user?.id;
+    if (authError || !callerId) {
+      return jsonResponse({ success: false, error: "Invalid or expired session" }, 200);
+    }
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -114,7 +109,7 @@ Deno.serve(async (req) => {
 
     const { data: user, error } = await supabase.auth.admin.createUser({
       email: email.trim().toLowerCase(),
-      password: password.trim(),
+      password,
       email_confirm: true,
       user_metadata: {
         full_name: full_name.trim(),
