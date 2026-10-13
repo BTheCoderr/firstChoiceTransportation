@@ -17,15 +17,10 @@ import { colors, spacing } from "@/theme/spacing";
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const { drivers, recentShifts, openShifts, isLoading, loadError, refresh } =
+  const { drivers, recentShifts, openShifts, pendingPayrollShifts, isLoading, loadError, refresh } =
     useAdminDashboard(SINGLE_COMPANY_ID);
 
   const [refreshing, setRefreshing] = useState(false);
-  const pendingPayrollShifts = recentShifts.filter(
-    ({ shift }) => shift.clock_out_at != null &&
-      shift.verified_hours_minutes == null &&
-      shift.suspicious_details?.shift_recovery === "closed_pending_payroll_review"
-  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
