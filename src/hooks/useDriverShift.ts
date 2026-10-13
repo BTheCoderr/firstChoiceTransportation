@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ShiftsRow } from "@/types/database";
 import {
-  getActiveShiftForDriver,
+  lookupActiveShiftForDriver,
+  type ActiveShiftLookup,
   startShift as startShiftService,
   type StartShiftCoords,
   type StartShiftResult,
@@ -42,12 +43,15 @@ export function useDriverShift(driverId: string | undefined) {
         safeSetState(() => setIsLoading(true));
       }
       try {
-        const shift = await withTimeout(
-          getActiveShiftForDriver(driverId),
+        const lookup = await withTimeout(
+          lookupActiveShiftForDriver(driverId),
           FETCH_ACTIVE_SHIFT_TIMEOUT_MS,
-          null as ShiftsRow | null
+          { ok: false, shift: null } as ActiveShiftLookup
         );
-        safeSetState(() => setActiveShift(shift));
+        // A network failure or timeout is not evidence that the shift ended.
+        if (lookup.ok) {
+          safeSetState(() => setActiveShift(lookup.shift));
+        }
       } finally {
         if (!silent) {
           safeSetState(() => setIsLoading(false));
@@ -68,19 +72,27 @@ export function useDriverShift(driverId: string | undefined) {
     }
     if (!activeShift || !driverId) return;
     pollRef.current = setInterval(() => {
-      getActiveShiftForDriver(driverId).then(async (shift) => {
-        /** If admin closed the shift server-side or it auto-ended, stop the lingering native tracking task. */
-        if (!shift) {
+      // Only a successful query confirming no active shift may stop GPS.
+      // Suppress transient network errors so a disconnected driver stays tracked.
+      void (async () => {
+        const lookup = await withTimeout(
+          lookupActiveShiftForDriver(driverId),
+          FETCH_ACTIVE_SHIFT_TIMEOUT_MS,
+          { ok: false, shift: null } as ActiveShiftLookup
+        );
+        if (!lookup.ok) return;
+        if (!lookup.shift) {
           try {
             if (await isLocationTrackingActive()) {
               await stopBackgroundLocationTracking();
             }
           } catch {
-            // best-effort cleanup
+            // Best-effort cleanup if the server confirmed clock-out.
           }
         }
-        safeSetState(() => setActiveShift(shift));
-      });
+        safeSetState(() => setActiveShift(lookup.shift));
+      })().catch(() => {});
+
     }, ACTIVE_SHIFT_POLL_INTERVAL_MS);
     return () => {
       if (pollRef.current) {
