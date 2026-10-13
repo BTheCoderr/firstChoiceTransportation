@@ -57,16 +57,7 @@ async function fetchWithTimeout(
 
 export interface CreateDriverInput {
   email: string;
-  full_name: string;
-  password: string;
-  /** Optional. If provided with lat/lng, creates the driver's home base. */
-  home_base_address?: string | null;
-  home_base_latitude?: number | null;
-  home_base_longitude?: number | null;
-  /**
-   * Admin JWT from auth context (in memory). When set, skips `getSession()` / SecureStore —
-   * avoids hangs from concurrent refresh + storage on some devices.
-   */
+  /** Current admin session JWT. Server verifies identity and company. */
   accessToken?: string | null;
 }
 
@@ -74,6 +65,8 @@ export interface CreateDriverResult {
   success: boolean;
   userId?: string;
   email?: string;
+  activationEmailSent?: boolean;
+  message?: string;
   error?: string;
 }
 
@@ -165,18 +158,7 @@ export async function createDriver(
 
   const body: Record<string, unknown> = {
     email: input.email.trim().toLowerCase(),
-    full_name: input.full_name.trim(),
-    password: input.password,
   };
-  if (input.home_base_address != null) {
-    body.home_base_address = input.home_base_address.trim() || null;
-  }
-  if (input.home_base_latitude != null && typeof input.home_base_latitude === "number") {
-    body.home_base_latitude = input.home_base_latitude;
-  }
-  if (input.home_base_longitude != null && typeof input.home_base_longitude === "number") {
-    body.home_base_longitude = input.home_base_longitude;
-  }
 
   const base = supabaseUrl.replace(/\/+$/, "");
   const fnUrl = `${base}/functions/v1/create-driver`;
@@ -266,7 +248,7 @@ export async function createDriver(
     };
   }
 
-  let parsed: { success?: boolean; error?: string; userId?: string; email?: string };
+  let parsed: { success?: boolean; error?: string; userId?: string; email?: string; activationEmailSent?: boolean; message?: string };
   try {
     parsed = rawText ? JSON.parse(rawText) : {};
   } catch {
@@ -298,6 +280,8 @@ export async function createDriver(
       success: true,
       userId: parsed.userId,
       email: parsed.email,
+      activationEmailSent: parsed.activationEmailSent,
+      message: parsed.message,
     };
   }
   if (__DEV__) {

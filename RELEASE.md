@@ -6,9 +6,20 @@ This app contains employee location and payroll-related records. Do not reopen p
 
 1. Restore the existing Supabase project `xxrxzpktxeaplsnatcvn`, using the connected project and not a new database.
 2. Compare applied database migrations to `supabase/migrations/`, especially **015** (abandoned shifts) and **016** (role-claim hardening), then apply only missing migrations in order. Back up operational data and review SQL before applying.
-3. Redeploy `supabase/functions/create-driver/index.ts` with `verify_jwt=false` only because the function now validates user tokens via `supabase.auth.getUser(token)`. Confirm forged and expired tokens cannot create a driver. Do not expose service-role keys in Expo/public builds.
+3. `create-driver` version 12 is deployed with independently verified tokens and company admin role checks. Before accepting production invites, test forged and expired sessions, invitation email delivery, first password setup and employee profile completion. Do not expose service-role keys in Expo/public builds.
 4. Verify admin, driver, and database RLS permissions on a test account.
 5. Verify Supabase Auth password-reset redirect URL includes `https://firstchoicetransportation.netlify.app/auth/reset-password`.
+
+## Administrator-provisioned driver signup (2026-10-13)
+
+- Only an authenticated company administrator creates a driver account; they enter the employee's email, never their password. The backend verifies the administrator's live Supabase Auth token and database company role.
+- Migration 025 is already applied to the existing Supabase project. Public email signup and the old ensure_profile RPC cannot create driver profiles. A new driver requires a private, one-use, server-generated provisioning key in trusted auth app_metadata.
+- Supabase create-driver Edge Function version 12 is ACTIVE with `verify_jwt=false` because the function independently calls `auth.getUser(token)` and checks the caller's trusted database role and company.
+- The employee receives a recovery/activation email through Supabase Auth to set their own password. The existing HTTPS recovery bridge returns the employee to the app. The employee then enters their full name and optional contact phone before the driver workspace is unlocked.
+- Older app builds sending administrator-selected passwords are rejected server-side. Build and deploy the new mobile app before asking administrators to invite employees.
+- Approved Home/Office GPS bases can only be changed by same-company administrators under RLS. Drivers can see, but not alter, them.
+- Synthetic transactional tests passed for uninvited user rejection, trusted admin provision, one-time token consumption, driver onboarding, self-promotion prevention and GPS-base write denial. No test accounts or original profiles were modified.
+- The complete real invitation, email deliverability, deep-link, password setup, initial profile entry and physical iPhone flow still require device testing. No real employee invite was sent while testing.
 
 ## GPS return-to-base and administrator recovery
 

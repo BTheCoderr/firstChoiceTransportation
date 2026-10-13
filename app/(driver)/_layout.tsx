@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { mainHeaderScreenOptions } from "@/navigation/mainHeaderOptions";
 import { ShiftLocationProvider } from "@/providers/ShiftLocationProvider";
 import { DriverShiftProvider } from "@/providers/DriverShiftProvider";
+import { DriverOnboardingForm } from "@/components/driver/DriverOnboardingForm";
 import { colors } from "@/theme/spacing";
 import {
   pathnameIsRootIndex,
@@ -21,7 +22,7 @@ export default function DriverLayout() {
   const pathname = usePathname();
   const segments = useSegments();
   const segmentKey = segments.join("/");
-  const { role, user, isLoading, profileLoading } = useAuth();
+  const { role, user, profile, isLoading, profileLoading } = useAuth();
 
   useEffect(() => {
     if (isLoading || profileLoading) return;
@@ -56,6 +57,12 @@ export default function DriverLayout() {
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
+  }
+
+  // Auth account and role are administrator-provisioned. The employee completes
+  // personal details before seeing any shift or GPS controls.
+  if (!profile?.onboarding_completed_at) {
+    return <DriverOnboardingForm />;
   }
 
   return (
