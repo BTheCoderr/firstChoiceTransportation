@@ -118,6 +118,54 @@ export type Database = {
           },
         ]
       }
+      driver_provisioning_intents: {
+        Row: {
+          company_id: string
+          consumed_at: string | null
+          created_at: string
+          created_by: string
+          email: string
+          id: string
+          provisioning_key: string
+          user_id: string | null
+        }
+        Insert: {
+          company_id: string
+          consumed_at?: string | null
+          created_at?: string
+          created_by: string
+          email: string
+          id?: string
+          provisioning_key: string
+          user_id?: string | null
+        }
+        Update: {
+          company_id?: string
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string
+          email?: string
+          id?: string
+          provisioning_key?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "driver_provisioning_intents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "driver_provisioning_intents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       geofence_clockout_settings: {
         Row: {
           departure_m: number
@@ -154,34 +202,40 @@ export type Database = {
       profiles: {
         Row: {
           company_id: string | null
+          contact_phone: string | null
           created_at: string
           email: string
           full_name: string
           id: string
           login_id: string | null
           login_type: string | null
+          onboarding_completed_at: string | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
         Insert: {
           company_id?: string | null
+          contact_phone?: string | null
           created_at?: string
           email: string
           full_name: string
           id: string
           login_id?: string | null
           login_type?: string | null
+          onboarding_completed_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
         Update: {
           company_id?: string | null
+          contact_phone?: string | null
           created_at?: string
           email?: string
           full_name?: string
           id?: string
           login_id?: string | null
           login_type?: string | null
+          onboarding_completed_at?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
