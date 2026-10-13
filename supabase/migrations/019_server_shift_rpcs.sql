@@ -120,7 +120,7 @@ BEGIN
   SELECT count(*) INTO v_point_count
   FROM public.route_points WHERE shift_id = p_shift_id;
   v_flagged := v_shift.status = 'flagged' OR v_shift.flagged_at IS NOT NULL
-    OR v_point_count = 0 OR v_minutes > 960;
+    OR v_point_count = 0 OR v_minutes > 600;
   v_detail := coalesce(v_shift.suspicious_details, '{}'::jsonb)
     || jsonb_build_object('calculated_on_server',true,
                           'route_points_before_dropoff',v_point_count,
@@ -146,7 +146,7 @@ BEGIN
       suspicious_reason = CASE
         WHEN v_shift.suspicious_reason IS NOT NULL THEN v_shift.suspicious_reason
         WHEN v_point_count = 0 THEN 'missing_route_history'
-        WHEN v_minutes > 960 THEN 'extended_shift'
+        WHEN v_minutes > 600 THEN 'extended_shift'
         ELSE NULL END,
       flagged_at = CASE WHEN v_flagged THEN coalesce(v_shift.flagged_at, v_dropoff_at) ELSE NULL END,
       suspicious_details = v_detail
