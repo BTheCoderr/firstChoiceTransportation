@@ -14,7 +14,10 @@ export const TRACKING_LAST_ERROR_KEY = "active_tracking_last_error";
 export const LOCATION_UPDATE_INTERVAL_MS = 30_000;
 
 /** Minimum distance before a new update (meters) */
-export const LOCATION_DISTANCE_INTERVAL_M = 50;
+// A smaller on-shift interval helps collect separate dwell samples near a
+// registered base. OS delivery still isn't guaranteed; use admin review when
+// stationary updates cannot be confirmed.
+export const LOCATION_DISTANCE_INTERVAL_M = 5;
 
 /** Max wait for a single GPS fix (user-facing) */
 export const LOCATION_REQUEST_TIMEOUT_MS = 5_000;
