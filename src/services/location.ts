@@ -1,7 +1,9 @@
 import * as Location from "expo-location";
 import * as SecureStore from "expo-secure-store";
+import { supabase } from "@/lib/supabase";
 import {
   LOCATION_TASK_NAME,
+  GEOFENCE_TASK_NAME,
   TRACKING_SHIFT_ID_KEY,
   TRACKING_LAST_ERROR_KEY,
   LOCATION_UPDATE_INTERVAL_MS,
@@ -247,7 +249,7 @@ export async function startBackgroundLocationTracking(
 
     await Promise.race([
       Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.High,
         timeInterval: LOCATION_UPDATE_INTERVAL_MS,
         distanceInterval: LOCATION_DISTANCE_INTERVAL_M,
         foregroundService: {
@@ -265,6 +267,38 @@ export async function startBackgroundLocationTracking(
       ),
     ]);
 
+    // Extra native wake-up at the approved return bases. Tracking still
+    // requires a separate sequence of accurate GPS samples before auto-end.
+    try {
+      const { data: driverShift } = await supabase
+        .from("shifts")
+        .select("driver_id")
+        .eq("id", shiftId)
+        .maybeSingle();
+      if (driverShift?.driver_id) {
+        const { data: bases } = await supabase
+          .from("driver_bases")
+          .select("id,name,latitude,longitude")
+          .eq("driver_id", driverShift.driver_id);
+        const regions = (bases ?? [])
+          .filter((base) => ["home", "office"].includes(base.name.trim().toLowerCase()))
+          .filter((base) => Number.isFinite(base.latitude) && Number.isFinite(base.longitude))
+          .map((base) => ({
+            identifier: `return-base:${base.id}`,
+            latitude: base.latitude,
+            longitude: base.longitude,
+            radius: 180,
+            notifyOnEnter: true,
+            notifyOnExit: false,
+          }));
+        if (regions.length) {
+          await Location.startGeofencingAsync(GEOFENCE_TASK_NAME, regions);
+        }
+      }
+    } catch {
+      // Geofence notifications are best-effort. Route tracking remains active.
+    }
+
     return true;
   } catch {
     try {
@@ -280,6 +314,9 @@ export async function startBackgroundLocationTracking(
 }
 
 export async function stopBackgroundLocationTracking(): Promise<void> {
+  try { await Location.stopGeofencingAsync(GEOFENCE_TASK_NAME); } catch {
+    // Region tracking may not have been enabled.
+  }
   try {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
   } catch {
