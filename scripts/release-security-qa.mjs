@@ -14,6 +14,8 @@ const routePolicySource = read("supabase/migrations/021_limit_route_points_to_op
 const adminServiceSource = read("src/services/admin.ts");
 const geofenceSource = read("supabase/migrations/022_gps_auto_clockout_staged.sql");
 const driverHomeSource = read("app/(driver)/index.tsx");
+const shiftHookSource = read("src/hooks/useDriverShift.ts");
+const shiftLookupSource = read("src/services/shifts.ts");
 const driverShiftSource = read("app/(driver)/shift.tsx");
 const backgroundTaskSource = read("src/tasks/backgroundLocationTask.ts");
 const eas = JSON.parse(read("eas.json"));
@@ -51,6 +53,10 @@ for (const [name, screen] of [["Home", driverHomeSource], ["Shift", driverShiftS
 }
 assert.match(backgroundTaskSource, /GEOFENCE_TASK_NAME/, "Background task must register return-base geofence");
 assert.match(backgroundTaskSource, /shiftState\?\.clock_out_at/, "Background tracking must stop after server closes the shift");
+assert.match(shiftLookupSource, /export async function lookupActiveShiftForDriver/, "Use distinguishable shift query status");
+assert.match(shiftHookSource, /if \(!lookup.ok\) return/, "GPS poll must ignore network failures");
+assert.match(driverHomeSource, /const permissionGranted = await requestPermissions\(\)/, "Clock-in requires always-on GPS authorization");
+assert.match(driverHomeSource, /const hasReturnBase = bases.some/, "Clock-in requires an approved Home or Office");
 assert.equal(eas.cli.appVersionSource, "remote", "Versioning should be managed by EAS");
 assert.equal(eas.build.production.autoIncrement, true, "Release builds must advance build number");
 assert.doesNotMatch(config, /buildNumber:|versionCode:/, "Static build numbers must not conflict with remote versions");
