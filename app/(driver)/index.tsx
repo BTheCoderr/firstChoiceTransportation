@@ -12,7 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDriverShift } from "@/providers/DriverShiftProvider";
 import { useDriverLocation } from "@/providers/ShiftLocationProvider";
 import { getCurrentPosition } from "@/services/location";
-import { getDefaultBaseForDriver } from "@/services/driverBases";
+import { getBasesForDriver } from "@/services/driverBases";
 import { getTodaysLastShiftForDriver } from "@/services/shifts";
 import { StartShiftCard } from "@/components/driver/StartShiftCard";
 import { ShiftStatusCard } from "@/components/driver/ShiftStatusCard";
@@ -45,10 +45,8 @@ export default function DriverHomeScreen() {
     activeShift,
     isLoading,
     isStarting,
-    isEnding,
     refresh,
     startShift,
-    endShift,
   } = useDriverShift();
   const {
     permissionReady,
@@ -73,8 +71,8 @@ export default function DriverHomeScreen() {
     if (!profile?.id) return;
     void (async () => {
       try {
-        const base = await getDefaultBaseForDriver(profile.id);
-        safeSetState(() => setHasBaseLocation(!!base));
+        const base = await getBasesForDriver(profile.id);
+        safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
       } catch {
         /* ignore */
       }
@@ -103,9 +101,9 @@ export default function DriverHomeScreen() {
         try {
           await refresh({ silent: true });
           if (!active || !profile?.id) return;
-          const base = await getDefaultBaseForDriver(profile.id);
+          const base = await getBasesForDriver(profile.id);
           if (active) {
-            safeSetState(() => setHasBaseLocation(!!base));
+            safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
           }
         } catch {
           /* ignore */
@@ -126,8 +124,8 @@ export default function DriverHomeScreen() {
           refreshState(),
           loadTodaysLastShift(),
           profile?.id
-            ? getDefaultBaseForDriver(profile.id).then((base) => {
-                safeSetState(() => setHasBaseLocation(!!base));
+            ? getBasesForDriver(profile.id).then((base) => {
+                safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
               })
             : Promise.resolve(),
         ]),
@@ -193,18 +191,6 @@ export default function DriverHomeScreen() {
 
   const handleViewShift = () => {
     router.push("/(driver)/shift");
-  };
-
-  const handleFinalDropoff = async (lat: number, lng: number) => {
-    if (!activeShift) return { success: false, error: "NO_SHIFT" };
-    const result = await endShift(activeShift.id, lat, lng);
-    if (result.success) {
-      await refresh({ silent: true });
-    }
-    return {
-      success: result.success,
-      error: !result.success ? result.error : undefined,
-    };
   };
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Driver";
