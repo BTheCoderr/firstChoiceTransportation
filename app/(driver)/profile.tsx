@@ -62,11 +62,20 @@ export default function DriverProfileScreen() {
 
   return (
     <ScreenContainer>
-      <ScreenTitle>Default base</ScreenTitle>
+      <ScreenTitle>My driver profile</ScreenTitle>
       <ScreenLead>
-        Your admin sets Home and Office. End-of-shift travel time uses only the
-        default base your admin selected — not the other location.
+        Your administrator created this account. Your personal information is
+        yours to provide, but your company, role, and GPS-approved Home and Office
+        are administrator-controlled. Either saved base may confirm return.
       </ScreenLead>
+      <View style={styles.baseCard}>
+        <Text style={styles.baseName}>{profile?.full_name ?? "Driver"}</Text>
+        <Text style={styles.baseAddress}>{profile?.email ?? ""}</Text>
+        {profile?.contact_phone ? (
+          <Text style={styles.baseAddress}>{profile.contact_phone}</Text>
+        ) : null}
+      </View>
+      <Text style={styles.baseName}>Legacy default return base</Text>
       {resolved ? (
         <View style={styles.baseCard}>
           <Text style={styles.baseName}>Default ({resolved.name})</Text>
@@ -84,17 +93,16 @@ export default function DriverProfileScreen() {
             {settings?.defaultBaseType === "office" ? "Office" : "Home"})
           </Text>
           <Text style={styles.noBaseHint}>
-            Ask your admin to save that base, or to change the default to a base
-            that already has an address. The app does not use the other base when
-            this one is empty.
+            Ask your admin to confirm Home and Office locations. Automatic GPS
+            clock-out can use either saved location after a confirmed return.
           </Text>
         </View>
       ) : (
         <View style={styles.noBaseCard}>
           <Text style={styles.noBaseText}>No base set</Text>
           <Text style={styles.noBaseHint}>
-            Contact your admin to set up your home or office base. You need a
-            default base with coordinates to end shifts and record verified hours.
+            Contact your admin to set up at least one approved Home or Office
+            GPS location before starting a tracked shift.
           </Text>
         </View>
       )}
