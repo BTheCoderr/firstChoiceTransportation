@@ -21,6 +21,11 @@ export default function AdminDashboardScreen() {
     useAdminDashboard(SINGLE_COMPANY_ID);
 
   const [refreshing, setRefreshing] = useState(false);
+  const pendingPayrollShifts = recentShifts.filter(
+    ({ shift }) => shift.clock_out_at != null &&
+      shift.verified_hours_minutes == null &&
+      shift.suspicious_details?.shift_recovery === "closed_pending_payroll_review"
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -111,6 +116,27 @@ export default function AdminDashboardScreen() {
                 );
               })}
             </View>
+          )}
+
+          {pendingPayrollShifts.length > 0 && (
+            <>
+              <SectionHeading size="large" style={styles.recentHeading}>
+                Payroll approval pending ({pendingPayrollShifts.length})
+              </SectionHeading>
+              <Text style={styles.reviewHelp}>
+                These shifts were administratively closed but still have no approved
+                paid minutes. Open each audit and explicitly approve the documented hours.
+              </Text>
+              <View style={styles.cardList}>
+                {pendingPayrollShifts.map((item) => (
+                  <AdminShiftListItem
+                    key={item.shift.id}
+                    item={item}
+                    onPress={() => handleShiftPress(item.shift.id)}
+                  />
+                ))}
+              </View>
+            </>
           )}
 
           <SectionHeading size="large" style={styles.driversHeading}>
