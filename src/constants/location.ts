@@ -3,6 +3,7 @@
  */
 
 export const LOCATION_TASK_NAME = "BACKGROUND_LOCATION_TASK";
+export const GEOFENCE_TASK_NAME = "RETURN_TO_BASE_GEOFENCE_TASK";
 
 export const TRACKING_SHIFT_ID_KEY = "active_tracking_shift_id";
 
