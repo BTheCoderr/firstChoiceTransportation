@@ -13,6 +13,9 @@ const endShiftSource = read("src/services/endShift.ts");
 const routePolicySource = read("supabase/migrations/021_limit_route_points_to_open_shifts.sql");
 const adminServiceSource = read("src/services/admin.ts");
 const geofenceSource = read("supabase/migrations/022_gps_auto_clockout_staged.sql");
+const driverHomeSource = read("app/(driver)/index.tsx");
+const driverShiftSource = read("app/(driver)/shift.tsx");
+const backgroundTaskSource = read("src/tasks/backgroundLocationTask.ts");
 const eas = JSON.parse(read("eas.json"));
 const config = read("app.config.ts");
 const nav = read("web/src/components/Nav.tsx");
@@ -42,6 +45,12 @@ assert.match(geofenceSource, /enabled boolean NOT NULL DEFAULT false/, "Auto clo
 assert.match(geofenceSource, /clock_out_method','gps_confirmed_base_arrival'/, "Arrival-based auto clock-out must retain audit method");
 assert.match(geofenceSource, /dwell_seconds integer NOT NULL DEFAULT 180/, "GPS dwell requirement must be defined");
 assert.match(geofenceSource, /lower\(trim\(b.name\)\) IN \('home', 'office'\)/, "Both registered bases can confirm return");
+for (const [name, screen] of [["Home", driverHomeSource], ["Shift", driverShiftSource]]) {
+  assert.match(screen, /AutoClockOutCard/, `${name} must present automatic clock-out`);
+  assert.doesNotMatch(screen, /FinalDropoffCard|handleFinalDropoff/, `${name} must not offer manual clock-out`);
+}
+assert.match(backgroundTaskSource, /GEOFENCE_TASK_NAME/, "Background task must register return-base geofence");
+assert.match(backgroundTaskSource, /shiftState\?\.clock_out_at/, "Background tracking must stop after server closes the shift");
 assert.equal(eas.cli.appVersionSource, "remote", "Versioning should be managed by EAS");
 assert.equal(eas.build.production.autoIncrement, true, "Release builds must advance build number");
 assert.doesNotMatch(config, /buildNumber:|versionCode:/, "Static build numbers must not conflict with remote versions");
