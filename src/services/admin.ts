@@ -8,6 +8,7 @@ import type {
 } from "@/types/database";
 import type { AdminDriverListItem, DriverBaseSettings } from "@/types/app";
 import { getDriverBaseSettings } from "@/services/driverBases";
+import type { ShiftReviewEvent } from "@/services/shiftRecovery";
 
 /** UTC Monday boundary, shared by dashboard and driver detail. */
 function getWeekStart(date: Date): string {
@@ -50,6 +51,7 @@ export interface ShiftDetailResult {
   clientStops: ClientStopsRow[];
   routePointsCount: number;
   clientStopsCount: number;
+  reviewEvents: ShiftReviewEvent[];
 }
 
 /**
@@ -109,6 +111,35 @@ export async function getCompanyDriversWithWeeklyStats(
     shiftCount: statsByDriver[p.id]?.shiftCount ?? 0,
     flaggedCount: statsByDriver[p.id]?.flaggedCount ?? 0,
     weekStart,
+  }));
+}
+
+/** Visible work queue: every open shift requires a GPS return or admin review. */
+export async function getOpenCompanyShifts(
+  companyId: string,
+  limit = 50
+): Promise<RecentShiftWithDriver[]> {
+  const { data: rows, error } = await supabase
+    .from("shifts")
+    .select("*")
+    .eq("company_id", companyId)
+    .is("clock_out_at", null)
+    .order("clock_in_at", { ascending: true })
+    .limit(limit);
+
+  if (error || !rows?.length) return [];
+  const shifts = rows as ShiftsRow[];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", [...new Set(shifts.map((s) => s.driver_id))]);
+  const names = new Map(
+    (profiles ?? []).map((p) => [p.id, { name: p.full_name, email: p.email }])
+  );
+  return shifts.map((shift) => ({
+    shift,
+    driverName: names.get(shift.driver_id)?.name ?? "Unknown",
+    driverEmail: names.get(shift.driver_id)?.email ?? "",
   }));
 }
 
@@ -176,7 +207,6 @@ export async function getDriverDetail(
       .from("shifts")
       .select("*")
       .eq("driver_id", driverId)
-      .in("status", ["completed", "flagged"])
       .order("clock_in_at", { ascending: false })
       .limit(10),
     supabase
@@ -254,7 +284,7 @@ export async function getShiftDetail(
   const driverName = profile?.full_name ?? "Unknown";
   const driverEmail = profile?.email ?? "";
 
-  const [routeRes, stopsRes] = await Promise.all([
+  const [routeRes, stopsRes, auditRes] = await Promise.all([
     supabase
       .from("route_points")
       .select("*")
@@ -265,6 +295,11 @@ export async function getShiftDetail(
       .select("*")
       .eq("shift_id", shiftId)
       .order("recorded_at", { ascending: true }),
+    supabase
+      .from("shift_review_events")
+      .select("*")
+      .eq("shift_id", shiftId)
+      .order("created_at", { ascending: false }),
   ]);
 
   const routePoints = (routeRes.data ?? []) as RoutePointsRow[];
@@ -278,5 +313,6 @@ export async function getShiftDetail(
     clientStops,
     routePointsCount: routePoints.length,
     clientStopsCount: clientStops.length,
+    reviewEvents: (auditRes.data ?? []) as ShiftReviewEvent[],
   };
 }
