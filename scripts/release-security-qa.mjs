@@ -22,13 +22,26 @@ const reviewMigrationSource = read("supabase/migrations/024_admin_shift_review_r
 const recoveryServiceSource = read("src/services/shiftRecovery.ts");
 const recoveryPanelSource = read("src/components/admin/AdminShiftRecoveryPanel.tsx");
 const adminDashboardSource = read("app/(admin)/index.tsx");
+const provisioningMigrationSource = read("supabase/migrations/025_admin_provisioned_driver_onboarding.sql");
+const adminInviteFormSource = read("app/(admin)/create-driver.tsx");
+const driverOnboardingSource = read("src/components/driver/DriverOnboardingForm.tsx");
+const driverLayoutSource = read("app/(driver)/_layout.tsx");
 const eas = JSON.parse(read("eas.json"));
 const config = read("app.config.ts");
 const nav = read("web/src/components/Nav.tsx");
 
-assert.match(functionSource, /supabase\.auth\.getUser\(token\)/, "Create-driver must validate the caller token with Auth");
+assert.match(functionSource, /server\.auth\.getUser\(token\)/, "Create-driver must validate the caller token with Auth");
 assert.doesNotMatch(functionSource, /getUserIdFromJwt|atob\(base64\)/, "Decoding a JWT payload is not authentication");
-assert.match(functionSource, /profile\.role !== "admin"/, "Function must check trusted database role");
+assert.match(functionSource, /admin\.role !== "admin"/, "Function must check trusted database role");
+assert.match(provisioningMigrationSource, /NEW.raw_app_meta_data->>'first_choice_provisioning_key'/, "Only admin-approved Auth users may become drivers");
+assert.doesNotMatch(provisioningMigrationSource, /NEW.raw_user_meta_data->>'role'/, "Never authorize user metadata roles");
+assert.match(provisioningMigrationSource, /admin_provisioning_required/, "ensure_profile must not create spontaneous driver identities");
+assert.match(provisioningMigrationSource, /REVOKE ALL ON TABLE public.driver_provisioning_intents/, "Private provisioning table inaccessible to clients");
+assert.match(functionSource, /auth.admin.createUser/, "Only admin server provisions new drivers");
+assert.match(functionSource, /resetPasswordForEmail/, "Driver must receive password activation");
+assert.doesNotMatch(adminInviteFormSource, /Temporary password|setPassword\(/, "Admin must not choose driver password");
+assert.match(driverLayoutSource, /DriverOnboardingForm/, "New drivers must complete onboarding before shifts");
+assert.match(driverOnboardingSource, /onboarding_completed_at/, "Onboarding saved to driver profile");
 assert.match(policySource, /'driver'::public\.user_role/, "New accounts must default to driver");
 assert.doesNotMatch(policySource, /raw_user_meta_data->>'role'/, "User metadata must not set an authorization role");
 assert.match(protectedFieldsSource, /current_user IN \('authenticated', 'anon'\)/, "Only trusted operators can alter protected profile fields");
