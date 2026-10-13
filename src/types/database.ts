@@ -286,6 +286,7 @@ type TableDef<R, I, U> = {
 };
 
 export interface Database {
+  __InternalSupabase: { PostgrestVersion: "14.4" };
   public: {
     Tables: {
       companies: TableDef<CompaniesRow, CompaniesInsert, CompaniesUpdate>;
