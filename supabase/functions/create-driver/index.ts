@@ -53,7 +53,16 @@ Deno.serve(async (request: Request) => {
       return respond({ success: false, error: "Company administrator access required." }, 403);
     }
 
-    const input = await request.json() as { email?: unknown };
+    const input = await request.json() as {
+      email?: unknown; password?: unknown; full_name?: unknown;
+    };
+    // Old deployed clients still ask administrators for temporary passwords.
+    // Reject those requests rather than misleading the admin that the
+    // employee can sign in with a password the server intentionally ignored.
+    if ("password" in input || "full_name" in input) {
+      return respond({ success: false,
+        error: "This version of First Choice is outdated. Update the app before inviting new drivers." }, 409);
+    }
     const email = typeof input.email === "string"
       ? input.email.trim().toLowerCase() : "";
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
