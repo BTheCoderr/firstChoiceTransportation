@@ -61,7 +61,8 @@ assert.match(clockinGuardSource, /onboarding_completed_at/, "Server must require
 assert.match(clockinGuardSource, /APPROVED_GPS_BASE_REQUIRED/, "Server must require administrator-approved Home or Office");
 assert.match(clockinGuardSource, /CREATE TRIGGER enforce_driver_clockin_prerequisites/, "Old direct writes must enforce onboarding rules");
 assert.match(clockinGuardSource, /NEW.driver_id IS DISTINCT FROM auth.uid\(\)/, "Direct clock-in must verify employee identity");
-assert.match(shiftServiceSource, /result\.error/, "Clock-in must return server errors");
+assert.match(shiftServiceSource, /error\?\.message\?\.includes\("ONBOARDING_REQUIRED"\)/, "Clock-in must preserve onboarding failure reason");
+assert.match(shiftServiceSource, /error\?\.message\?\.includes\("APPROVED_GPS_BASE_REQUIRED"\)/, "Clock-in must preserve missing-base failure reason");
 assert.match(endShiftSource, /supabase.rpc\("complete_driver_shift"/, "Final dropoff must call server RPC");
 assert.doesNotMatch(endShiftSource, /\.from\("shifts"\)\.update/, "Final dropoff must not write payroll fields from the device");
 assert.match(routePolicySource, /s.clock_out_at IS NULL/, "GPS uploads must be limited to open shifts");
