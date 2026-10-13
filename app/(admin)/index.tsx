@@ -17,7 +17,7 @@ import { colors, spacing } from "@/theme/spacing";
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const { drivers, recentShifts, isLoading, refresh } =
+  const { drivers, recentShifts, openShifts, isLoading, refresh } =
     useAdminDashboard(SINGLE_COMPANY_ID);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -81,6 +81,38 @@ export default function AdminDashboardScreen() {
         </View>
       ) : (
         <>
+          <SectionHeading size="large" style={styles.driversHeading}>
+            Open shifts requiring GPS return or review ({openShifts.length})
+          </SectionHeading>
+          <Text style={styles.reviewHelp}>
+            These shifts are not yet clocked out. Investigate overdue shifts and
+            review the GPS route before closing them. Payroll approval is separate.
+          </Text>
+          {openShifts.length === 0 ? (
+            <Text style={styles.placeholder}>No open shifts need review.</Text>
+          ) : (
+            <View style={styles.cardList}>
+              {openShifts.map((item) => {
+                const ageHours = (Date.now() - new Date(item.shift.clock_in_at).getTime()) / 3_600_000;
+                return (
+                  <View key={item.shift.id}>
+                    {ageHours >= 16 ? (
+                      <Text style={styles.overdueLabel}>
+                        Review needed: open for {Math.floor(ageHours)} hours
+                      </Text>
+                    ) : (
+                      <Text style={styles.activeLabel}>Tracking in progress</Text>
+                    )}
+                    <AdminShiftListItem
+                      item={item}
+                      onPress={() => handleShiftPress(item.shift.id)}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           <SectionHeading size="large" style={styles.driversHeading}>
             Drivers
           </SectionHeading>
@@ -193,6 +225,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSubtle,
     marginBottom: spacing.md,
+  },
+  reviewHelp: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
+    lineHeight: 19,
+  },
+  overdueLabel: {
+    color: "#b91c1c",
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: spacing.xs,
+  },
+  activeLabel: {
+    color: "#475569",
+    fontSize: 13,
+    marginBottom: spacing.xs,
   },
   cardList: {
     gap: spacing.cardGap,
