@@ -32,3 +32,12 @@ jobs:
 
       - name: Verify pinned navigation dependency
         run: npm run deps:verify
+
+      - name: Release and security regression QA
+        run: npm run qa:release
+
+      - name: Website dependencies
+        run: npm ci --prefix web
+
+      - name: Website production build
+        run: npm run build --prefix web

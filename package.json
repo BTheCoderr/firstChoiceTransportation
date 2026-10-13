@@ -17,7 +17,8 @@
     "deploy:create-driver": "supabase functions deploy create-driver --no-verify-jwt --project-ref xxrxzpktxeaplsnatcvn",
     "qa:option-b-timing": "node scripts/option-b-timing-qa.mjs",
     "deps:verify": "node -e \"const p=require('./node_modules/react-native-screens/package.json'); if(p.version!=='4.16.0'){console.error('Expected react-native-screens@4.16.0, got',p.version); process.exit(1)} console.log('react-native-screens@'+p.version);\"",
-    "deps:reinstall": "rm -rf node_modules && npm install"
+    "deps:reinstall": "rm -rf node_modules && npm install",
+    "qa:release": "node scripts/release-security-qa.mjs"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
