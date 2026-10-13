@@ -16,7 +16,7 @@ import { getDefaultBaseForDriver } from "@/services/driverBases";
 import { getTodaysLastShiftForDriver } from "@/services/shifts";
 import { StartShiftCard } from "@/components/driver/StartShiftCard";
 import { ShiftStatusCard } from "@/components/driver/ShiftStatusCard";
-import { FinalDropoffCard } from "@/components/driver/FinalDropoffCard";
+import { AutoClockOutCard } from "@/components/driver/AutoClockOutCard";
 import { ShiftSummaryCard } from "@/components/driver/ShiftSummaryCard";
 import { LocationStatusCard } from "@/components/driver/LocationStatusCard";
 import {
@@ -260,16 +260,8 @@ export default function DriverHomeScreen() {
       {activeShift ? (
         <>
           <ShiftStatusCard shift={activeShift} onViewShift={handleViewShift} />
-          <ScreenSection title="End your shift" spacingTop={spacing.xl}>
-            <Text style={styles.sectionHelp}>
-              Start shifts on Home; end with the button below when you are at your
-              last dropoff.
-            </Text>
-            <FinalDropoffCard
-              onFinalDropoff={handleFinalDropoff}
-              isEnding={isEnding}
-              hasBaseLocation={hasBaseLocation}
-            />
+          <ScreenSection title="Automatic GPS clock-out" spacingTop={spacing.xl}>
+            <AutoClockOutCard hasApprovedBase={hasBaseLocation} trackingActive={isTracking} />
           </ScreenSection>
         </>
       ) : (
