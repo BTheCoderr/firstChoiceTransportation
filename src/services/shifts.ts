@@ -47,7 +47,7 @@ export async function getActiveShiftForDriver(
 
 export type StartShiftResult =
   | { success: true; shift: ShiftsRow }
-  | { success: false; error: "ALREADY_ACTIVE" | "INSERT_FAILED" };
+  | { success: false; error: "ALREADY_ACTIVE" | "INSERT_FAILED" | "ONBOARDING_REQUIRED" | "APPROVED_GPS_BASE_REQUIRED" };
 
 export async function startShift(
   driverId: string,
@@ -66,6 +66,12 @@ export async function startShift(
   if (error || !data) {
     if (isDuplicateActiveShiftError(error)) {
       return { success: false, error: "ALREADY_ACTIVE" };
+    }
+    if (error?.message?.includes("ONBOARDING_REQUIRED")) {
+      return { success: false, error: "ONBOARDING_REQUIRED" };
+    }
+    if (error?.message?.includes("APPROVED_GPS_BASE_REQUIRED")) {
+      return { success: false, error: "APPROVED_GPS_BASE_REQUIRED" };
     }
     return { success: false, error: "INSERT_FAILED" };
   }
