@@ -252,6 +252,9 @@ export async function startBackgroundLocationTracking(
         accuracy: Location.Accuracy.High,
         timeInterval: LOCATION_UPDATE_INTERVAL_MS,
         distanceInterval: LOCATION_DISTANCE_INTERVAL_M,
+        // During an active paid shift, preserve background arrival samples.
+        pausesUpdatesAutomatically: false,
+        showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: "Shift tracking active",
           notificationBody:
