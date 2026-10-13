@@ -17,7 +17,7 @@ import { colors, spacing } from "@/theme/spacing";
 
 export default function AdminDashboardScreen() {
   const router = useRouter();
-  const { drivers, recentShifts, openShifts, isLoading, refresh } =
+  const { drivers, recentShifts, openShifts, isLoading, loadError, refresh } =
     useAdminDashboard(SINGLE_COMPANY_ID);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -84,6 +84,8 @@ export default function AdminDashboardScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading drivers and shifts…</Text>
         </View>
+      ) : loadError ? (
+        <Text style={styles.loadError}>{loadError}</Text>
       ) : (
         <>
           <SectionHeading size="large" style={styles.driversHeading}>
@@ -252,6 +254,7 @@ const styles = StyleSheet.create({
     color: colors.textSubtle,
     marginBottom: spacing.md,
   },
+  loadError: { color: "#b91c1c", fontSize: 14, marginBottom: spacing.md },
   reviewHelp: {
     fontSize: 13,
     color: colors.textMuted,
