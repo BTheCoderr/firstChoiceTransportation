@@ -8,6 +8,7 @@ import {
 } from "@/constants/location";
 import { insertRoutePointWithRetry } from "@/services/routePoints";
 import { processMovementUpdate } from "@/services/movement";
+import { supabase } from "@/lib/supabase";
 
 type TrackingErrorSnapshot = {
   message: string;
@@ -75,6 +76,20 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error: taskError }) =>
           "Route tracking is running, but a location point could not be uploaded after retries. Check your connection."
         );
         continue;
+      }
+
+      // The database may have closed the shift automatically on return to base.
+      // Check after uploading each sample so tracking does not continue off duty.
+      const { data: shiftState } = await supabase
+        .from("shifts")
+        .select("clock_out_at")
+        .eq("id", shiftId)
+        .maybeSingle();
+      if (shiftState?.clock_out_at) {
+        try { await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME); } catch {}
+        try { await SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY); } catch {}
+        await clearTrackingError();
+        return;
       }
 
       // A successful upload proves the pipeline recovered.
