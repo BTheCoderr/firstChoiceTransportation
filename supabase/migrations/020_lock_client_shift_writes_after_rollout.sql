@@ -8,6 +8,12 @@ REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.shifts
   FROM PUBLIC, anon, authenticated;
 -- Movement tracking still updates the status of an active shift and may flag
 -- suspicious activity. Never grant fields that determine paid time.
+-- Prevent older clients from invoking the manual final-dropoff RPC after
+-- GPS auto-clock-out is activated. The function remains for historical audit
+-- compatibility, but not executable by the app's authenticated role.
+REVOKE EXECUTE ON FUNCTION public.complete_driver_shift(uuid,double precision,double precision)
+  FROM PUBLIC, anon, authenticated;
+
 GRANT UPDATE (status, first_movement_at, suspicious_reason, suspicious_details, flagged_at)
   ON TABLE public.shifts TO authenticated;
 
