@@ -24,6 +24,8 @@ export interface ProfilesRow {
   company_id: string | null;
   email: string;
   full_name: string;
+  contact_phone?: string | null;
+  onboarding_completed_at?: string | null;
   role: UserRole;
   created_at: string;
   updated_at: string;
