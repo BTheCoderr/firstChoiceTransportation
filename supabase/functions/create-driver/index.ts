@@ -1,163 +1,117 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders = {
+const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+const RESET_REDIRECT =
+  "https://firstchoicetransportation.netlify.app/auth/reset-password";
 
-interface CreateDriverRequest {
-  email: string;
-  full_name: string;
-  password: string;
-  /** Optional. If lat+lng provided, creates driver's home base. */
-  home_base_address?: string | null;
-  home_base_latitude?: number | null;
-  home_base_longitude?: number | null;
-}
-
-function jsonResponse(body: object, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+function respond(data: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status, headers: { ...cors, "Content-Type": "application/json" },
   });
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+function randomPassword(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
 
-  if (req.method !== "POST") {
-    return jsonResponse({ success: false, error: "Method not allowed" }, 405);
-  }
+Deno.serve(async (request: Request) => {
+  if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (request.method !== "POST") return respond({ success: false, error: "Method not allowed" }, 405);
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return jsonResponse({ success: false, error: "Missing or invalid authorization" }, 200);
+    const authHeader = request.headers.get("Authorization") ?? "";
+    if (!authHeader.startsWith("Bearer ")) {
+      return respond({ success: false, error: "Sign in as an administrator first." }, 401);
+    }
+    const url = Deno.env.get("SUPABASE_URL");
+    const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+      Deno.env.get("SUPABASE_SERVICE_ROLE");
+    if (!url || !secret) {
+      console.error("create-driver: missing server environment configuration");
+      return respond({ success: false, error: "Driver invitations are not configured on the server." }, 503);
     }
 
-    // verify_jwt is disabled at the gateway for modern access tokens.
-    // Never trust decoded JWT claims here: verify the token with Supabase Auth.
-    const token = authHeader.slice("Bearer ".length).trim();
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")?.trim();
-    /**
-     * Prefer custom secrets when set (dashboard may lock `SUPABASE_SERVICE_ROLE_KEY`).
-     * `SUPABASEE_SERVICE_ROLE` supports the common typo if the UI rejects the correct name.
-     */
-    const serviceRoleKey =
-      Deno.env.get("SUPABASE_SERVICE_ROLE")?.trim() ||
-      Deno.env.get("SUPABASEE_SERVICE_ROLE")?.trim() ||
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error(
-        "create-driver: missing SUPABASE_URL or service role secret"
-      );
-      return jsonResponse(
-        {
-          success: false,
-          error:
-            "Server misconfiguration: set service_role JWT as secret SUPABASE_SERVICE_ROLE (or SUPABASEE_SERVICE_ROLE if the UI required that spelling), ensure SUPABASE_URL is set, then redeploy create-driver.",
-        },
-        200
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+    const server = createClient(url, secret, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const { data: authData, error: authError } = await supabase.auth.getUser(token);
-    const callerId = authData.user?.id;
-    if (authError || !callerId) {
-      return jsonResponse({ success: false, error: "Invalid or expired session" }, 200);
+    // Never decode JWT claims or trust a caller-supplied role/company.
+    const token = authHeader.slice(7).trim();
+    const { data: userData, error: userError } = await server.auth.getUser(token);
+    if (userError || !userData.user) {
+      return respond({ success: false, error: "Invalid or expired administrator session." }, 401);
+    }
+    const { data: admin, error: adminError } = await server.from("profiles")
+      .select("role,company_id").eq("id", userData.user.id).single();
+    if (adminError || !admin || admin.role !== "admin" || !admin.company_id) {
+      return respond({ success: false, error: "Company administrator access required." }, 403);
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", callerId)
-      .single();
-
-    if (!profile || profile.role !== "admin") {
-      return jsonResponse({ success: false, error: "Admin role required" }, 200);
+    const input = await request.json() as { email?: unknown };
+    const email = typeof input.email === "string"
+      ? input.email.trim().toLowerCase() : "";
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return respond({ success: false, error: "Enter a valid driver email address." }, 400);
     }
 
-    const body = (await req.json()) as CreateDriverRequest & Record<string, unknown>;
-    const {
+    // One-time intent is written with trusted company + admin identity.
+    // Auth's trigger consumes it ONLY when app_metadata carries its unique
+    // server-generated key. Unsolicited public signup never creates a profile.
+    const key = crypto.randomUUID();
+    const { data: intent, error: intentError } = await server
+      .from("driver_provisioning_intents")
+      .insert({ email, company_id: admin.company_id,
+        created_by: userData.user.id, provisioning_key: key })
+      .select("id").single();
+    if (intentError || !intent) {
+      return respond({ success: false,
+        error: "This driver may already be provisioned. Check the driver list before retrying." }, 409);
+    }
+
+    const { data: created, error: creationError } = await server.auth.admin.createUser({
       email,
-      full_name,
-      password,
-      home_base_address,
-      home_base_latitude: rawLat,
-      home_base_longitude: rawLng,
-    } = body;
-
-    const home_base_latitude =
-      typeof rawLat === "number" ? rawLat : typeof rawLat === "string" ? Number(rawLat) : null;
-    const home_base_longitude =
-      typeof rawLng === "number" ? rawLng : typeof rawLng === "string" ? Number(rawLng) : null;
-
-    if (!email?.trim() || !full_name?.trim()) {
-      return jsonResponse({ success: false, error: "Email and full name are required" }, 200);
-    }
-    if (!password || typeof password !== "string" || password.length < 6) {
-      return jsonResponse({ success: false, error: "Password must be at least 6 characters" }, 200);
-    }
-
-    const { data: user, error } = await supabase.auth.admin.createUser({
-      email: email.trim().toLowerCase(),
-      password,
+      password: randomPassword(),
       email_confirm: true,
-      user_metadata: {
-        full_name: full_name.trim(),
-        role: "driver",
-      },
+      app_metadata: { first_choice_provisioning_key: key },
     });
-
-    if (error) {
-      return jsonResponse({ success: false, error: error.message }, 200);
+    if (creationError || !created.user) {
+      await server.from("driver_provisioning_intents").delete()
+        .eq("id", intent.id).is("consumed_at", null);
+      return respond({ success: false, error: "Driver creation failed. Check whether that email already exists." }, 409);
     }
 
-    const userId = user.user.id;
-    const lat = home_base_latitude;
-    const lng = home_base_longitude;
-    const hasValidBase =
-      typeof lat === "number" &&
-      typeof lng === "number" &&
-      Number.isFinite(lat) &&
-      Number.isFinite(lng) &&
-      lat >= -90 &&
-      lat <= 90 &&
-      lng >= -180 &&
-      lng <= 180;
-
-    if (hasValidBase) {
-      const { error: baseError } = await supabase.from("driver_bases").insert({
-        driver_id: userId,
-        name: "Home",
-        latitude: lat,
-        longitude: lng,
-        address: home_base_address?.trim() || null,
-        is_default: true,
-      });
-
-      if (baseError) {
-        console.error("Failed to create driver base:", baseError);
-        // Driver was created; base creation failed. Return success but log.
-        // Admin can set base later from driver detail.
-      }
+    const { data: profile, error: profileError } = await server.from("profiles")
+      .select("id,role,company_id").eq("id", created.user.id).single();
+    if (profileError || !profile ||
+      profile.role !== "driver" || profile.company_id !== admin.company_id) {
+      console.error("create-driver: provisioning result did not create a valid profile", created.user.id);
+      return respond({ success: false,
+        error: "Driver account was created, but activation requires administrator support. Do not invite again." }, 503);
     }
 
-    return jsonResponse({
-      success: true,
-      userId,
-      email: user.user.email,
+    // The employee chooses their OWN password via a one-use recovery link.
+    // Admins never choose, store or share the employee's password.
+    const { error: mailError } = await server.auth.resetPasswordForEmail(email, {
+      redirectTo: RESET_REDIRECT,
     });
-  } catch (e) {
-    console.error(e);
-    return jsonResponse({ success: false, error: "Internal server error" }, 200);
+    if (mailError) {
+      console.error("create-driver: activation email delivery failed", mailError.message);
+    }
+    return respond({
+      success: true, userId: created.user.id, email,
+      activationEmailSent: !mailError,
+      message: mailError
+        ? "Driver profile created. Activation email could not be sent. Ask driver to use Forgot Password after mail is configured."
+        : "Driver profile created. The driver will receive a link to set a password and complete their information.",
+    });
+  } catch (err) {
+    console.error("create-driver: unexpected error", err instanceof Error ? err.message : "unknown");
+    return respond({ success: false, error: "Driver creation was interrupted. Check the driver list before retrying." }, 500);
   }
 });
