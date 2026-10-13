@@ -1,4 +1,4 @@
-/** Generated from the live First Choice Supabase schema. Keep in sync when changing RPCs. */
+/** Generated from live First Choice Supabase schema. */
 export type Json =
   | string
   | number
@@ -118,6 +118,39 @@ export type Database = {
           },
         ]
       }
+      geofence_clockout_settings: {
+        Row: {
+          departure_m: number
+          dwell_seconds: number
+          enabled: boolean
+          id: boolean
+          max_accuracy_m: number
+          min_shift_minutes: number
+          radius_m: number
+          updated_at: string
+        }
+        Insert: {
+          departure_m?: number
+          dwell_seconds?: number
+          enabled?: boolean
+          id?: boolean
+          max_accuracy_m?: number
+          min_shift_minutes?: number
+          radius_m?: number
+          updated_at?: string
+        }
+        Update: {
+          departure_m?: number
+          dwell_seconds?: number
+          enabled?: boolean
+          id?: boolean
+          max_accuracy_m?: number
+          min_shift_minutes?: number
+          radius_m?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -169,6 +202,7 @@ export type Database = {
           is_moving: boolean | null
           latitude: number
           longitude: number
+          received_at: string
           recorded_at: string
           shift_id: string
           speed: number | null
@@ -179,6 +213,7 @@ export type Database = {
           is_moving?: boolean | null
           latitude: number
           longitude: number
+          received_at?: string
           recorded_at?: string
           shift_id: string
           speed?: number | null
@@ -189,6 +224,7 @@ export type Database = {
           is_moving?: boolean | null
           latitude?: number
           longitude?: number
+          received_at?: string
           recorded_at?: string
           shift_id?: string
           speed?: number | null
@@ -196,6 +232,73 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "route_points_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_review_events: {
+        Row: {
+          action: string
+          actor_id: string
+          approved_minutes: number | null
+          company_id: string
+          created_at: string
+          effective_end_at: string | null
+          id: string
+          note: string
+          previous_end_at: string | null
+          previous_verified_minutes: number | null
+          reason: string
+          shift_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          approved_minutes?: number | null
+          company_id: string
+          created_at?: string
+          effective_end_at?: string | null
+          id?: string
+          note: string
+          previous_end_at?: string | null
+          previous_verified_minutes?: number | null
+          reason: string
+          shift_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          approved_minutes?: number | null
+          company_id?: string
+          created_at?: string
+          effective_end_at?: string | null
+          id?: string
+          note?: string
+          previous_end_at?: string | null
+          previous_verified_minutes?: number | null
+          reason?: string
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_review_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_review_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_review_events_shift_id_fkey"
             columns: ["shift_id"]
             isOneToOne: false
             referencedRelation: "shifts"
@@ -370,6 +473,95 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _gps_distance_m: {
+        Args: { lat_a: number; lat_b: number; lon_a: number; lon_b: number }
+        Returns: number
+      }
+      admin_approve_recovered_shift_hours: {
+        Args: { p_note: string; p_shift_id: string }
+        Returns: {
+          auto_end_at: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          commute_base_latitude: number | null
+          commute_base_longitude: number | null
+          commute_base_name: string | null
+          commute_estimate_minutes: number | null
+          commute_estimate_raw_minutes: number | null
+          company_id: string
+          created_at: string
+          driver_id: string
+          estimated_return_minutes: number | null
+          first_movement_at: string | null
+          flagged_at: string | null
+          id: string
+          last_dropoff_at: string | null
+          last_dropoff_lat: number | null
+          last_dropoff_lng: number | null
+          return_base_address: string | null
+          return_base_lat: number | null
+          return_base_lng: number | null
+          return_base_type: string | null
+          start_lat: number | null
+          start_lng: number | null
+          status: Database["public"]["Enums"]["shift_status"]
+          suspicious_details: Json | null
+          suspicious_reason: string | null
+          updated_at: string
+          verified_hours_minutes: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shifts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      admin_close_open_shift_for_review: {
+        Args: {
+          p_effective_end_at: string
+          p_note: string
+          p_reason: string
+          p_shift_id: string
+        }
+        Returns: {
+          auto_end_at: string | null
+          clock_in_at: string
+          clock_out_at: string | null
+          commute_base_latitude: number | null
+          commute_base_longitude: number | null
+          commute_base_name: string | null
+          commute_estimate_minutes: number | null
+          commute_estimate_raw_minutes: number | null
+          company_id: string
+          created_at: string
+          driver_id: string
+          estimated_return_minutes: number | null
+          first_movement_at: string | null
+          flagged_at: string | null
+          id: string
+          last_dropoff_at: string | null
+          last_dropoff_lat: number | null
+          last_dropoff_lng: number | null
+          return_base_address: string | null
+          return_base_lat: number | null
+          return_base_lng: number | null
+          return_base_type: string | null
+          start_lat: number | null
+          start_lng: number | null
+          status: Database["public"]["Enums"]["shift_status"]
+          suspicious_details: Json | null
+          suspicious_reason: string | null
+          updated_at: string
+          verified_hours_minutes: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shifts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_driver_shift: {
         Args: {
           p_dropoff_lat: number
