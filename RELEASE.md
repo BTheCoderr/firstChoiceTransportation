@@ -33,6 +33,13 @@ This app contains employee location and payroll-related records. Do not reopen p
 - Run GPS tests: start at base without leaving, pass through base mid-route, return to either approved address, poor-accuracy and stale samples, moving device, disabled location, offline recovery, screen locked, app killed, relaunch, low battery, and shift ending while the app is backgrounded.
 - Test administrator permissions: drivers cannot perform recovery; admins cannot alter another company's shifts; clients cannot insert/update audit rows; double closure or double approval is rejected; an interrupted request can be retried after refreshing status.
 
+## Driver clock-in server authorization
+
+- Migration 026 is installed on existing Supabase: the server-clocked start-shift RPC rejects incomplete onboarding and missing admin-approved Home/Office, regardless of what the mobile UI displays.
+- A separate authenticated-only BEFORE INSERT trigger protects legacy direct shift writes pending the migration 020 coordinated cutover. The trigger does not rewrite historical shifts or auto-close active shifts.
+- Tested with rolled-back synthetic driver data: incomplete onboarding denied, direct clock-in denied, complete onboarding without GPS base denied, valid onboarded driver with admin-approved base succeeds, duplicate open shift rejected.
+- Client messages guide drivers back to personal setup or to their administrator. Historical shifts were untouched.
+
 ## iOS releases
 
 Production now uses `cli.appVersionSource: remote` and `production.autoIncrement: true` in `eas.json`. The previous local buildNumber 24 predates the TestFlight 1.0.1 build 25 already processed in May 2026. Before the FIRST build using remote versioning, inspect the current highest build number in App Store Connect/EAS, then run:
