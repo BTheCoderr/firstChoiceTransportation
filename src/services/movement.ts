@@ -43,7 +43,7 @@ export async function processMovementUpdate(
     ]);
 
     const shift = shiftData as ShiftsRow | null;
-    if (!shift || !points?.length) return;
+    if (!shift || shift.clock_out_at || !points?.length) return;
 
     const current: PointLike & { recorded_at: string } = {
       latitude: currentPoint.latitude,
@@ -64,14 +64,17 @@ export async function processMovementUpdate(
     const moving = isMeaningfulMovement(current, prior);
 
     if (moving) {
-      const updates: Record<string, unknown> = { status: "moving" };
+      const updates: Record<string, unknown> = {
+        status: shift.status === "flagged" ? "flagged" : "moving",
+      };
       if (!shift.first_movement_at) {
         updates.first_movement_at = current.recorded_at;
       }
       await supabase
         .from("shifts")
         .update(updates as never)
-        .eq("id", shiftId);
+        .eq("id", shiftId)
+        .is("clock_out_at", null);
       if (
         !shift.first_movement_at &&
         shouldFlagLateFirstMovement(
@@ -105,7 +108,8 @@ export async function processMovementUpdate(
           .from("shifts")
           .update({ status: "idle" } as never)
           .eq("id", shiftId)
-          .eq("status", "started");
+          .eq("status", "started")
+          .is("clock_out_at", null);
         if (shouldFlagNoMovement(minsSinceClockIn)) {
           flagShiftAsSuspicious({
             shiftId,
@@ -132,7 +136,8 @@ export async function processMovementUpdate(
         .from("shifts")
         .update({ status: "idle" } as never)
         .eq("id", shiftId)
-        .eq("status", "moving");
+        .eq("status", "moving")
+          .is("clock_out_at", null);
       if (shouldFlagLongIdle(minsSinceMovement)) {
         flagShiftAsSuspicious({
           shiftId,
