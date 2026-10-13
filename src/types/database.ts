@@ -301,6 +301,19 @@ export interface Database {
       >;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      ensure_profile: {
+        Args: Record<string, never>;
+        Returns: { success?: boolean; profile?: ProfilesRow; error?: string } | null;
+      };
+      start_driver_shift: {
+        Args: { p_start_lat: number; p_start_lng: number };
+        Returns: ShiftsRow;
+      };
+      complete_driver_shift: {
+        Args: { p_shift_id: string; p_dropoff_lat: number; p_dropoff_lng: number };
+        Returns: ShiftsRow;
+      };
+    };
   };
 }

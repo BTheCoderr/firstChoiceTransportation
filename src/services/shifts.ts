@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import type { ShiftsRow } from "@/types/database";
 
-const ACTIVE_STATUSES = ["started", "moving", "idle"] as const;
+const ACTIVE_STATUSES = ["started", "moving", "idle", "flagged"] as const;
 
 export interface StartShiftCoords {
   lat: number;
@@ -34,29 +34,16 @@ export async function startShift(
   companyId: string,
   coords?: StartShiftCoords
 ): Promise<StartShiftResult> {
-  const existing = await getActiveShiftForDriver(driverId);
-  if (existing) {
-    return { success: false, error: "ALREADY_ACTIVE" };
+  // Keep the old arguments for callers, but do not trust client identifiers or
+  // client clocks; the RPC verifies auth.uid() and reads company from profiles.
+  if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lng)) {
+    return { success: false, error: "INSERT_FAILED" };
   }
-
-  const insert = {
-    driver_id: driverId,
-    company_id: companyId,
-    clock_in_at: new Date().toISOString(),
-    status: "started" as const,
-    start_lat: coords?.lat ?? null,
-    start_lng: coords?.lng ?? null,
-  };
-
-  const { data, error } = await supabase
-    .from("shifts")
-    .insert(insert as never)
-    .select()
-    .single();
-
+  const { data, error } = await supabase.rpc("start_driver_shift", {
+    p_start_lat: coords.lat,
+    p_start_lng: coords.lng,
+  });
   if (error || !data) {
-    /** Partial unique index `idx_one_active_shift_per_driver` (migration 014) raises 23505 */
-    /** when another device created an active shift between our pre-check and this insert. */
     if (isDuplicateActiveShiftError(error)) {
       return { success: false, error: "ALREADY_ACTIVE" };
     }
@@ -69,6 +56,7 @@ function isDuplicateActiveShiftError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
   const e = error as { code?: unknown; message?: unknown };
   if (e.code === "23505") return true;
+  if (typeof e.message === "string" && e.message.includes("ALREADY_ACTIVE")) return true;
   return (
     typeof e.message === "string" &&
     e.message.toLowerCase().includes("idx_one_active_shift_per_driver")
