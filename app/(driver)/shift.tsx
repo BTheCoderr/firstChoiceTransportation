@@ -14,8 +14,8 @@ import { useDriverLocation } from "@/providers/ShiftLocationProvider";
 import { LocationStatusCard } from "@/components/driver/LocationStatusCard";
 import { LocationTrackingCard } from "@/components/driver/LocationTrackingCard";
 import { MovementStatusCard } from "@/components/driver/MovementStatusCard";
-import { FinalDropoffCard } from "@/components/driver/FinalDropoffCard";
-import { getDefaultBaseForDriver } from "@/services/driverBases";
+import { AutoClockOutCard } from "@/components/driver/AutoClockOutCard";
+import { getBasesForDriver } from "@/services/driverBases";
 import {
   formatDurationMinutes,
   getShiftElapsedMinutes,
@@ -53,9 +53,7 @@ export default function DriverShiftScreen() {
   const {
     activeShift,
     isLoading,
-    isEnding,
     refresh,
-    endShift,
   } = useDriverShift();
   const tracking = useDriverLocation();
   const {
@@ -90,8 +88,8 @@ export default function DriverShiftScreen() {
     if (!profile?.id) return;
     void (async () => {
       try {
-        const base = await getDefaultBaseForDriver(profile.id);
-        safeSetState(() => setHasBaseLocation(!!base));
+        const base = await getBasesForDriver(profile.id);
+        safeSetState(() => setHasBaseLocation(base?.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase())) ?? false));
       } catch {
         /* ignore */
       }
@@ -106,9 +104,9 @@ export default function DriverShiftScreen() {
         try {
           await refresh({ silent: true });
           if (!active || !profile?.id) return;
-          const base = await getDefaultBaseForDriver(profile.id);
+          const base = await getBasesForDriver(profile.id);
           if (active) {
-            safeSetState(() => setHasBaseLocation(!!base));
+            safeSetState(() => setHasBaseLocation(base?.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase())) ?? false));
           }
         } catch {
           /* ignore */
@@ -131,11 +129,11 @@ export default function DriverShiftScreen() {
       ]);
       if (profile?.id && mountedRef.current) {
         const base = await withTimeout(
-          getDefaultBaseForDriver(profile.id),
+          getBasesForDriver(profile.id),
           REFRESH_ALL_TIMEOUT_MS,
           null
         );
-        safeSetState(() => setHasBaseLocation(!!base));
+        safeSetState(() => setHasBaseLocation(base?.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase())) ?? false));
       }
     } catch {
       // ensure spinner clears
@@ -159,18 +157,6 @@ export default function DriverShiftScreen() {
       permissionReady &&
       foregroundPermission === "denied"
   );
-
-  const handleFinalDropoff = async (lat: number, lng: number) => {
-    if (!activeShift) return { success: false, error: "NO_SHIFT" };
-    const result = await endShift(activeShift.id, lat, lng);
-    if (result.success) {
-      router.replace("/(driver)");
-    }
-    return {
-      success: result.success,
-      error: !result.success ? result.error : undefined,
-    };
-  };
 
   if (isLoading) {
     return (
@@ -220,7 +206,7 @@ export default function DriverShiftScreen() {
         <View style={styles.locationDeniedBanner}>
           <Text style={styles.locationDeniedTitle}>Location disabled</Text>
           <Text style={styles.locationDeniedText}>
-            Enable location in Settings to record your final dropoff when ending the shift.
+            Enable background location in Settings so GPS can confirm your return to Home or Office.
           </Text>
         </View>
       )}
@@ -243,13 +229,9 @@ export default function DriverShiftScreen() {
           </Pressable>
         </View>
       )}
-      <ScreenSection title="End your shift">
+      <ScreenSection title="Automatic GPS clock-out">
         <View style={styles.cardBlock}>
-          <FinalDropoffCard
-            onFinalDropoff={handleFinalDropoff}
-            isEnding={isEnding}
-            hasBaseLocation={hasBaseLocation}
-          />
+          <AutoClockOutCard hasApprovedBase={hasBaseLocation} trackingActive={isTracking} />
         </View>
       </ScreenSection>
       <ScreenSection title="Shift details">

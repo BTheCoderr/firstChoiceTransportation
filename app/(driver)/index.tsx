@@ -12,11 +12,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDriverShift } from "@/providers/DriverShiftProvider";
 import { useDriverLocation } from "@/providers/ShiftLocationProvider";
 import { getCurrentPosition } from "@/services/location";
-import { getDefaultBaseForDriver } from "@/services/driverBases";
+import { getBasesForDriver } from "@/services/driverBases";
 import { getTodaysLastShiftForDriver } from "@/services/shifts";
 import { StartShiftCard } from "@/components/driver/StartShiftCard";
 import { ShiftStatusCard } from "@/components/driver/ShiftStatusCard";
-import { FinalDropoffCard } from "@/components/driver/FinalDropoffCard";
+import { AutoClockOutCard } from "@/components/driver/AutoClockOutCard";
 import { ShiftSummaryCard } from "@/components/driver/ShiftSummaryCard";
 import { LocationStatusCard } from "@/components/driver/LocationStatusCard";
 import {
@@ -45,10 +45,8 @@ export default function DriverHomeScreen() {
     activeShift,
     isLoading,
     isStarting,
-    isEnding,
     refresh,
     startShift,
-    endShift,
   } = useDriverShift();
   const {
     permissionReady,
@@ -73,8 +71,8 @@ export default function DriverHomeScreen() {
     if (!profile?.id) return;
     void (async () => {
       try {
-        const base = await getDefaultBaseForDriver(profile.id);
-        safeSetState(() => setHasBaseLocation(!!base));
+        const base = await getBasesForDriver(profile.id);
+        safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
       } catch {
         /* ignore */
       }
@@ -103,9 +101,9 @@ export default function DriverHomeScreen() {
         try {
           await refresh({ silent: true });
           if (!active || !profile?.id) return;
-          const base = await getDefaultBaseForDriver(profile.id);
+          const base = await getBasesForDriver(profile.id);
           if (active) {
-            safeSetState(() => setHasBaseLocation(!!base));
+            safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
           }
         } catch {
           /* ignore */
@@ -126,8 +124,8 @@ export default function DriverHomeScreen() {
           refreshState(),
           loadTodaysLastShift(),
           profile?.id
-            ? getDefaultBaseForDriver(profile.id).then((base) => {
-                safeSetState(() => setHasBaseLocation(!!base));
+            ? getBasesForDriver(profile.id).then((base) => {
+                safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
               })
             : Promise.resolve(),
         ]),
@@ -158,6 +156,27 @@ export default function DriverHomeScreen() {
     safeSetState(() => setStartError(null));
     safeSetState(() => setIsGettingLocation(true));
     try {
+      // GPS is the clock-out mechanism: never start paid time when the app
+      // cannot monitor the route in the background.
+      const bases = await getBasesForDriver(driverId);
+      const hasReturnBase = bases.some((base) =>
+        ["home", "office"].includes(base.name.trim().toLowerCase()) &&
+        Number.isFinite(base.latitude) &&
+        Number.isFinite(base.longitude)
+      );
+      if (!hasReturnBase) {
+        safeSetState(() => setStartError(
+          "An administrator must save an approved Home or Office before you can start a GPS-tracked shift."
+        ));
+        return;
+      }
+      const permissionGranted = await requestPermissions();
+      if (!permissionGranted) {
+        safeSetState(() => setStartError(
+          "Always Allow background location is required before clock-in. Enable it in Settings and retry."
+        ));
+        return;
+      }
       const position = await getCurrentPosition();
       if (!mountedRef.current) return;
       if (!position.ok) {
@@ -193,18 +212,6 @@ export default function DriverHomeScreen() {
 
   const handleViewShift = () => {
     router.push("/(driver)/shift");
-  };
-
-  const handleFinalDropoff = async (lat: number, lng: number) => {
-    if (!activeShift) return { success: false, error: "NO_SHIFT" };
-    const result = await endShift(activeShift.id, lat, lng);
-    if (result.success) {
-      await refresh({ silent: true });
-    }
-    return {
-      success: result.success,
-      error: !result.success ? result.error : undefined,
-    };
   };
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "Driver";
@@ -260,16 +267,8 @@ export default function DriverHomeScreen() {
       {activeShift ? (
         <>
           <ShiftStatusCard shift={activeShift} onViewShift={handleViewShift} />
-          <ScreenSection title="End your shift" spacingTop={spacing.xl}>
-            <Text style={styles.sectionHelp}>
-              Start shifts on Home; end with the button below when you are at your
-              last dropoff.
-            </Text>
-            <FinalDropoffCard
-              onFinalDropoff={handleFinalDropoff}
-              isEnding={isEnding}
-              hasBaseLocation={hasBaseLocation}
-            />
+          <ScreenSection title="Automatic GPS clock-out" spacingTop={spacing.xl}>
+            <AutoClockOutCard hasApprovedBase={hasBaseLocation} trackingActive={isTracking} />
           </ScreenSection>
         </>
       ) : (

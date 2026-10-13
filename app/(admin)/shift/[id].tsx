@@ -12,6 +12,7 @@ import { useLocalSearchParams } from "expo-router";
 import { getShiftDetail } from "@/services/admin";
 import type { ShiftDetailResult } from "@/services/admin";
 import { LocationWithAddress } from "@/components/admin/LocationWithAddress";
+import { AdminShiftRecoveryPanel } from "@/components/admin/AdminShiftRecoveryPanel";
 import { getMapsDirectionsUrl } from "@/services/geocoding";
 import { ScreenContainer, ScreenSection } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
@@ -145,6 +146,7 @@ export default function AdminShiftDetailScreen() {
     driverName,
     driverEmail,
     routePoints,
+    reviewEvents,
     routePointsCount,
     clientStopsCount,
   } = data;
@@ -156,11 +158,12 @@ export default function AdminShiftDetailScreen() {
     shift.last_dropoff_lat != null &&
     shift.last_dropoff_lng != null;
 
+  const automaticGpsClockOut = shift.suspicious_details?.clock_out_method === "gps_confirmed_base_arrival";
   const hasReturnAudit = shift.estimated_return_minutes != null;
 
   /** Option B payout path: ended shift plus dropoff coords and/or applied return estimate. */
   const showReturnToBaseClockOut =
-    Boolean(shift.clock_out_at) && (hasReturnAudit || hasDropoff);
+    Boolean(shift.clock_out_at) && !automaticGpsClockOut && (hasReturnAudit || hasDropoff);
   const etaWasUnavailable = returnEtaMarkedUnavailable(shift);
   const uncappedReturnEstimate = returnCommuteUncappedMinutes(shift);
 
@@ -184,6 +187,17 @@ export default function AdminShiftDetailScreen() {
         <Text style={styles.driverEmail}>{driverEmail}</Text>
       </ScreenSection>
 
+      {(shift.clock_out_at === null || reviewEvents.length > 0) && (
+        <ScreenSection title="Shift recovery and audit">
+          <AdminShiftRecoveryPanel
+            shift={shift}
+            routePoints={routePoints}
+            reviewEvents={reviewEvents}
+            onChanged={async () => { await load(); }}
+          />
+        </ScreenSection>
+      )}
+
       <ScreenSection title="Times">
         <View style={styles.card}>
           <Text style={styles.row}>
@@ -200,8 +214,9 @@ export default function AdminShiftDetailScreen() {
             {formatMinutes(shift.verified_hours_minutes)}
           </Text>
           <Text style={styles.helpMuted}>
-            Paid end time reflects last dropoff plus applied return-to-base
-            estimate to the saved home or office—not the tap time alone.
+            {automaticGpsClockOut
+              ? "GPS confirmed the return to an approved Home or Office; the system used the arrival time rather than an employee's manual clock-out."
+              : "Legacy shifts may include estimated return travel. Review each shift's audit details before approving paid hours."}
           </Text>
           {shift.first_movement_at && (
             <Text style={styles.row}>
@@ -211,6 +226,16 @@ export default function AdminShiftDetailScreen() {
         </View>
       </ScreenSection>
 
+      {automaticGpsClockOut ? (
+        <ScreenSection title="Automatic GPS clock-out">
+          <View style={styles.card}>
+            <Text style={styles.row}>Approved return location: {String(shift.suspicious_details?.clock_out_base_name ?? shift.return_base_type ?? "—")}</Text>
+            <Text style={styles.row}>Verified arrival: {shift.clock_out_at ? formatTime(shift.clock_out_at) : "—"}</Text>
+            <Text style={styles.row}>Confirmation readings: {String(shift.suspicious_details?.confirmation_samples ?? "—")}</Text>
+            <Text style={styles.helpMuted}>GPS readings provide evidence, not absolute proof. Review unusual shifts or disputed hours.</Text>
+          </View>
+        </ScreenSection>
+      ) : null}
       {showReturnToBaseClockOut ? (
         <ScreenSection title="Return-to-base clock-out">
           <View style={styles.card}>

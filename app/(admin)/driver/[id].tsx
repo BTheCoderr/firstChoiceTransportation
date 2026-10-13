@@ -287,13 +287,13 @@ export default function AdminDriverDetailScreen() {
             </View>
 
             <View style={styles.activeDefaultBlock}>
-              <Text style={styles.baseName}>Active default for travel</Text>
+              <Text style={styles.baseName}>Legacy travel default</Text>
               <Text style={styles.activeDefaultValue}>
                 {baseSettings.defaultBaseType === "office" ? "Office" : "Home"}
               </Text>
               <Text style={styles.validationHint}>
-                End-of-shift and return-time calculations use only this base, not
-                the other one.
+                Automatic GPS clock-out recognizes either saved Home or Office.
+                This default is retained for historical travel estimates.
               </Text>
             </View>
 
@@ -314,7 +314,7 @@ export default function AdminDriverDetailScreen() {
             )}
 
             <Text style={styles.editOverviewHint}>
-              Tap Edit to change addresses or which base is the default.
+              Tap Edit to change either approved GPS location or the legacy travel default.
             </Text>
           </View>
         )}

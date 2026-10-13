@@ -120,9 +120,9 @@ function successMessageForBaseSave(
     (savedTab === "Home" && defaultBaseType === "home") ||
     (savedTab === "Office" && defaultBaseType === "office")
   ) {
-    return `${savedName} base saved. It is also the active default for travel and end of shift.`;
+    return `${savedName} base saved. It is also the legacy travel default. Either saved Home or Office can confirm an automatic GPS clock-out.`;
   }
-  return `${savedName} base saved. ${defaultName} is still the active default for travel and end-of-shift calculations.`;
+  return `${savedName} base saved. ${defaultName} is still the legacy travel default. Either saved Home or Office can confirm an automatic GPS clock-out.`;
 }
 
 export function DriverBaseForm({
@@ -287,7 +287,7 @@ export function DriverBaseForm({
         <View style={styles.divider} />
 
         <Text style={styles.sectionHeading}>
-          Used for travel and end-of-shift calculations
+          Legacy return-travel default
         </Text>
         <Text style={styles.sectionCaption}>
           Active default:{" "}
@@ -296,9 +296,9 @@ export function DriverBaseForm({
           </Text>
         </Text>
         <Text style={styles.hint}>
-          Tap Home or Office to set which base is used for return-time estimates.
-          This is saved to the database immediately (separate from the address
-          fields below).
+          Both saved Home and Office locations are eligible for automatic GPS
+          clock-out. This default applies only to historical travel estimates.
+          It is saved separately from the addresses below.
         </Text>
         <View style={styles.row}>
           <Pressable

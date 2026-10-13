@@ -2,7 +2,7 @@ import "react-native-url-polyfill/auto";
 import { createClient } from "@supabase/supabase-js";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
-import type { Database } from "@/types/database";
+import type { Database } from "@/types/generated";
 
 type Extra = {
   supabaseUrl?: string;

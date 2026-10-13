@@ -3,11 +3,13 @@ import * as Location from "expo-location";
 import * as SecureStore from "expo-secure-store";
 import {
   LOCATION_TASK_NAME,
+  GEOFENCE_TASK_NAME,
   TRACKING_SHIFT_ID_KEY,
   TRACKING_LAST_ERROR_KEY,
 } from "@/constants/location";
 import { insertRoutePointWithRetry } from "@/services/routePoints";
 import { processMovementUpdate } from "@/services/movement";
+import { supabase } from "@/lib/supabase";
 
 type TrackingErrorSnapshot = {
   message: string;
@@ -77,6 +79,21 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error: taskError }) =>
         continue;
       }
 
+      // The database may have closed the shift automatically on return to base.
+      // Check after uploading each sample so tracking does not continue off duty.
+      const { data: shiftState } = await supabase
+        .from("shifts")
+        .select("clock_out_at")
+        .eq("id", shiftId)
+        .maybeSingle();
+      if (shiftState?.clock_out_at) {
+        try { await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME); } catch {}
+        try { await Location.stopGeofencingAsync(GEOFENCE_TASK_NAME); } catch {}
+        try { await SecureStore.deleteItemAsync(TRACKING_SHIFT_ID_KEY); } catch {}
+        await clearTrackingError();
+        return;
+      }
+
       // A successful upload proves the pipeline recovered.
       await clearTrackingError();
 
@@ -93,5 +110,37 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error: taskError }) =>
         `Route tracking encountered an error: ${message}`
       );
     }
+  }
+});
+
+/**
+ * iOS/Android region entry is an additional opportunity to upload a precise
+ * location point. It does not bypass server dwell/departure checks.
+ */
+TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data, error: regionError }) => {
+  if (regionError) {
+    await persistTrackingError("Return-to-base geofence location is unavailable.");
+    return;
+  }
+  const event = data as { eventType?: number } | undefined;
+  if (event?.eventType !== Location.GeofencingEventType.Enter) return;
+  try {
+    const shiftId = await SecureStore.getItemAsync(TRACKING_SHIFT_ID_KEY);
+    if (!shiftId) return;
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+    await insertRoutePointWithRetry({
+      shift_id: shiftId,
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      recorded_at: new Date(position.timestamp).toISOString(),
+      accuracy: position.coords.accuracy,
+      speed: position.coords.speed,
+    });
+  } catch {
+    await persistTrackingError(
+      "A return-to-base GPS check was unavailable. Background route tracking will continue."
+    );
   }
 });

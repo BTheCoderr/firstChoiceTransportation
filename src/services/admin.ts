@@ -8,14 +8,21 @@ import type {
 } from "@/types/database";
 import type { AdminDriverListItem, DriverBaseSettings } from "@/types/app";
 import { getDriverBaseSettings } from "@/services/driverBases";
+import type { ShiftReviewEvent } from "@/services/shiftRecovery";
 
-/** Get Monday of the week for a given date (YYYY-MM-DD) */
+/** UTC Monday boundary, shared by dashboard and driver detail. */
 function getWeekStart(date: Date): string {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  return d.toISOString().split("T")[0];
+  const day = date.getUTCDay();
+  const mondayOffset = (day + 6) % 7;
+  const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() - mondayOffset));
+  return monday.toISOString().slice(0, 10);
+}
+
+/** Exclusive end at next Monday, not 23:59 on the current Monday. */
+function getWeekEndExclusive(weekStart: string): string {
+  const next = new Date(`${weekStart}T00:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + 7);
+  return next.toISOString();
 }
 
 export interface DriverWithWeeklyStats extends AdminDriverListItem {}
@@ -44,6 +51,7 @@ export interface ShiftDetailResult {
   clientStops: ClientStopsRow[];
   routePointsCount: number;
   clientStopsCount: number;
+  reviewEvents: ShiftReviewEvent[];
 }
 
 /**
@@ -54,7 +62,7 @@ export async function getCompanyDriversWithWeeklyStats(
   companyId: string
 ): Promise<DriverWithWeeklyStats[]> {
   const weekStart = getWeekStart(new Date());
-  const weekEnd = `${weekStart}T23:59:59`;
+  const weekEnd = getWeekEndExclusive(weekStart);
 
   const { data: profilesData, error: profilesError } = await supabase
     .from("profiles")
@@ -71,7 +79,7 @@ export async function getCompanyDriversWithWeeklyStats(
     .eq("company_id", companyId)
     .in("status", ["completed", "flagged"])
     .gte("clock_in_at", `${weekStart}T00:00:00`)
-    .lte("clock_in_at", weekEnd);
+    .lt("clock_in_at", weekEnd);
 
   if (shiftsError) return [];
 
@@ -103,6 +111,68 @@ export async function getCompanyDriversWithWeeklyStats(
     shiftCount: statsByDriver[p.id]?.shiftCount ?? 0,
     flaggedCount: statsByDriver[p.id]?.flaggedCount ?? 0,
     weekStart,
+  }));
+}
+
+/** Visible work queue: every open shift requires a GPS return or admin review. */
+export async function getOpenCompanyShifts(
+  companyId: string,
+  limit = 50
+): Promise<RecentShiftWithDriver[]> {
+  const { data: rows, error } = await supabase
+    .from("shifts")
+    .select("*")
+    .eq("company_id", companyId)
+    .is("clock_out_at", null)
+    .order("clock_in_at", { ascending: true })
+    .limit(limit);
+
+  if (error) throw new Error("OPEN_SHIFT_QUERY_FAILED");
+  if (!rows?.length) return [];
+  const shifts = rows as ShiftsRow[];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", [...new Set(shifts.map((s) => s.driver_id))]);
+  const names = new Map(
+    (profiles ?? []).map((p) => [p.id, { name: p.full_name, email: p.email }])
+  );
+  return shifts.map((shift) => ({
+    shift,
+    driverName: names.get(shift.driver_id)?.name ?? "Unknown",
+    driverEmail: names.get(shift.driver_id)?.email ?? "",
+  }));
+}
+
+/** Separate backlog: don't hide payroll-pending closures behind a recent-15 limit. */
+export async function getPendingCompanyPayrollShifts(
+  companyId: string,
+  limit = 100
+): Promise<RecentShiftWithDriver[]> {
+  const { data: rows, error } = await supabase
+    .from("shifts")
+    .select("*")
+    .eq("company_id", companyId)
+    .not("clock_out_at", "is", null)
+    .is("verified_hours_minutes", null)
+    .contains("suspicious_details", { shift_recovery: "closed_pending_payroll_review" })
+    .order("clock_out_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error("PENDING_PAYROLL_QUERY_FAILED");
+  if (!rows?.length) return [];
+  const shifts = rows as ShiftsRow[];
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", [...new Set(shifts.map((s) => s.driver_id))]);
+  if (profilesError) throw new Error("PENDING_PAYROLL_DRIVERS_QUERY_FAILED");
+  const names = new Map(
+    (profiles ?? []).map((p) => [p.id, { name: p.full_name, email: p.email }])
+  );
+  return shifts.map((shift) => ({
+    shift,
+    driverName: names.get(shift.driver_id)?.name ?? "Unknown",
+    driverEmail: names.get(shift.driver_id)?.email ?? "",
   }));
 }
 
@@ -162,7 +232,7 @@ export async function getDriverDetail(
   const profile = profileData as ProfilesRow;
 
   const weekStart = getWeekStart(new Date());
-  const weekEnd = `${weekStart}T23:59:59`;
+  const weekEnd = getWeekEndExclusive(weekStart);
 
   const [baseSettings, shiftsRes, weeklyRes] = await Promise.all([
     getDriverBaseSettings(driverId),
@@ -170,7 +240,6 @@ export async function getDriverDetail(
       .from("shifts")
       .select("*")
       .eq("driver_id", driverId)
-      .in("status", ["completed", "flagged"])
       .order("clock_in_at", { ascending: false })
       .limit(10),
     supabase
@@ -180,7 +249,7 @@ export async function getDriverDetail(
       .eq("company_id", SINGLE_COMPANY_ID)
       .in("status", ["completed", "flagged"])
       .gte("clock_in_at", `${weekStart}T00:00:00`)
-      .lte("clock_in_at", weekEnd),
+      .lt("clock_in_at", weekEnd),
   ]);
   const recentShifts = (shiftsRes.data ?? []) as ShiftsRow[];
   const weeklyShifts = weeklyRes.data ?? [];
@@ -248,7 +317,7 @@ export async function getShiftDetail(
   const driverName = profile?.full_name ?? "Unknown";
   const driverEmail = profile?.email ?? "";
 
-  const [routeRes, stopsRes] = await Promise.all([
+  const [routeRes, stopsRes, auditRes] = await Promise.all([
     supabase
       .from("route_points")
       .select("*")
@@ -259,6 +328,11 @@ export async function getShiftDetail(
       .select("*")
       .eq("shift_id", shiftId)
       .order("recorded_at", { ascending: true }),
+    supabase
+      .from("shift_review_events")
+      .select("*")
+      .eq("shift_id", shiftId)
+      .order("created_at", { ascending: false }),
   ]);
 
   const routePoints = (routeRes.data ?? []) as RoutePointsRow[];
@@ -272,5 +346,6 @@ export async function getShiftDetail(
     clientStops,
     routePointsCount: routePoints.length,
     clientStopsCount: clientStops.length,
+    reviewEvents: (auditRes.data ?? []) as ShiftReviewEvent[],
   };
 }
