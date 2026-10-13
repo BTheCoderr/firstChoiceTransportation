@@ -89,7 +89,7 @@ export default function DriverShiftScreen() {
     void (async () => {
       try {
         const base = await getBasesForDriver(profile.id);
-        safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
+        safeSetState(() => setHasBaseLocation(base?.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase())) ?? false));
       } catch {
         /* ignore */
       }
@@ -106,7 +106,7 @@ export default function DriverShiftScreen() {
           if (!active || !profile?.id) return;
           const base = await getBasesForDriver(profile.id);
           if (active) {
-            safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
+            safeSetState(() => setHasBaseLocation(base?.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase())) ?? false));
           }
         } catch {
           /* ignore */
@@ -133,7 +133,7 @@ export default function DriverShiftScreen() {
           REFRESH_ALL_TIMEOUT_MS,
           null
         );
-        safeSetState(() => setHasBaseLocation(base.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase()))));
+        safeSetState(() => setHasBaseLocation(base?.some((item) => ["home", "office"].includes(item.name.trim().toLowerCase())) ?? false));
       }
     } catch {
       // ensure spinner clears
