@@ -156,6 +156,27 @@ export default function DriverHomeScreen() {
     safeSetState(() => setStartError(null));
     safeSetState(() => setIsGettingLocation(true));
     try {
+      // GPS is the clock-out mechanism: never start paid time when the app
+      // cannot monitor the route in the background.
+      const bases = await getBasesForDriver(driverId);
+      const hasReturnBase = bases.some((base) =>
+        ["home", "office"].includes(base.name.trim().toLowerCase()) &&
+        Number.isFinite(base.latitude) &&
+        Number.isFinite(base.longitude)
+      );
+      if (!hasReturnBase) {
+        safeSetState(() => setStartError(
+          "An administrator must save an approved Home or Office before you can start a GPS-tracked shift."
+        ));
+        return;
+      }
+      const permissionGranted = await requestPermissions();
+      if (!permissionGranted) {
+        safeSetState(() => setStartError(
+          "Always Allow background location is required before clock-in. Enable it in Settings and retry."
+        ));
+        return;
+      }
       const position = await getCurrentPosition();
       if (!mountedRef.current) return;
       if (!position.ok) {
