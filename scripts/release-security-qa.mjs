@@ -9,6 +9,7 @@ const rpcHardeningSource = read("supabase/migrations/018_harden_legacy_rpcs.sql"
 const shiftRpcSource = read("supabase/migrations/019_server_shift_rpcs.sql");
 const cutoverSource = read("supabase/migrations/020_lock_client_shift_writes_after_rollout.sql");
 const shiftServiceSource = read("src/services/shifts.ts");
+const clockinGuardSource = read("supabase/migrations/026_server_guard_driver_clockin.sql");
 const endShiftSource = read("src/services/endShift.ts");
 const routePolicySource = read("supabase/migrations/021_limit_route_points_to_open_shifts.sql");
 const adminServiceSource = read("src/services/admin.ts");
@@ -56,6 +57,11 @@ assert.match(shiftRpcSource, /clock_timestamp\(\)/, "Shift times must come from 
 assert.match(shiftRpcSource, /REVOKE ALL ON FUNCTION public.complete_driver_shift/, "RPC calls must be restricted");
 assert.match(cutoverSource, /REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public.shifts/, "Cutover must revoke arbitrary driver payroll writes");
 assert.match(shiftServiceSource, /supabase.rpc\("start_driver_shift"/, "Start must call server RPC");
+assert.match(clockinGuardSource, /onboarding_completed_at/, "Server must require completed driver setup");
+assert.match(clockinGuardSource, /APPROVED_GPS_BASE_REQUIRED/, "Server must require administrator-approved Home or Office");
+assert.match(clockinGuardSource, /CREATE TRIGGER enforce_driver_clockin_prerequisites/, "Old direct writes must enforce onboarding rules");
+assert.match(clockinGuardSource, /NEW.driver_id IS DISTINCT FROM auth.uid\(\)/, "Direct clock-in must verify employee identity");
+assert.match(shiftServiceSource, /result\.error/, "Clock-in must return server errors");
 assert.match(endShiftSource, /supabase.rpc\("complete_driver_shift"/, "Final dropoff must call server RPC");
 assert.doesNotMatch(endShiftSource, /\.from\("shifts"\)\.update/, "Final dropoff must not write payroll fields from the device");
 assert.match(routePolicySource, /s.clock_out_at IS NULL/, "GPS uploads must be limited to open shifts");
