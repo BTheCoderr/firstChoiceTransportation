@@ -39,6 +39,8 @@ assert.match(provisioningMigrationSource, /admin_provisioning_required/, "ensure
 assert.match(provisioningMigrationSource, /REVOKE ALL ON TABLE public.driver_provisioning_intents/, "Private provisioning table inaccessible to clients");
 assert.match(functionSource, /auth.admin.createUser/, "Only admin server provisions new drivers");
 assert.match(functionSource, /resetPasswordForEmail/, "Driver must receive password activation");
+assert.match(functionSource, /"password" in input \|\| "full_name" in input/, "Reject outdated admin-password clients");
+assert.match(functionSource, /first_choice_provisioning_key: key/, "Trusted provisioning key must originate server-side");
 assert.doesNotMatch(adminInviteFormSource, /Temporary password|setPassword\(/, "Admin must not choose driver password");
 assert.match(driverLayoutSource, /DriverOnboardingForm/, "New drivers must complete onboarding before shifts");
 assert.match(driverOnboardingSource, /onboarding_completed_at/, "Onboarding saved to driver profile");
