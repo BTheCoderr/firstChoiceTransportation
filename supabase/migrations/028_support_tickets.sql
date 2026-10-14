@@ -117,6 +117,7 @@ DECLARE
  v_ticket public.support_tickets%ROWTYPE;
  v_body text := btrim(coalesce(p_body,''));
  v_next text;
+ v_previous_status text;
 BEGIN
  IF v_actor IS NULL THEN RAISE EXCEPTION 'AUTH_REQUIRED' USING ERRCODE='42501'; END IF;
  SELECT company_id,role INTO v_company,v_role FROM public.profiles WHERE id=v_actor;
@@ -129,6 +130,7 @@ BEGIN
  IF NOT FOUND OR (v_role <> 'admin'::public.user_role AND v_ticket.created_by <> v_actor) THEN
    RAISE EXCEPTION 'TICKET_NOT_FOUND' USING ERRCODE='42501';
  END IF;
+ v_previous_status := v_ticket.status;
  IF v_ticket.status = 'closed' THEN
    RAISE EXCEPTION 'TICKET_CLOSED' USING ERRCODE='22023';
  END IF;
@@ -143,6 +145,12 @@ BEGIN
      ELSE 'open' END;
  UPDATE public.support_tickets SET status=v_next, updated_at=clock_timestamp()
    WHERE id=p_ticket_id RETURNING * INTO v_ticket;
+ IF v_previous_status IS DISTINCT FROM v_next THEN
+   INSERT INTO public.support_ticket_events
+     (ticket_id,company_id,actor_id,from_status,to_status,from_priority,to_priority,note)
+   VALUES (p_ticket_id,v_company,v_actor,v_previous_status,v_next,v_ticket.priority,v_ticket.priority,
+     'Status updated after a new conversation message');
+ END IF;
  RETURN v_ticket;
 END;
 $$;
