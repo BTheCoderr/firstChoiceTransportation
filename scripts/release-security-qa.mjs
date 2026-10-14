@@ -26,6 +26,10 @@ const adminDashboardSource = read("app/(admin)/index.tsx");
 const provisioningMigrationSource = read("supabase/migrations/025_admin_provisioned_driver_onboarding.sql");
 const adminInviteFormSource = read("app/(admin)/create-driver.tsx");
 const driverOnboardingSource = read("src/components/driver/DriverOnboardingForm.tsx");
+const authProviderSource = read("src/providers/AuthProvider.tsx");
+const resetPasswordScreenSource = read("app/(auth)/update-password.tsx");
+const forgotPasswordScreenSource = read("app/(auth)/forgot-password.tsx");
+const recoveryBridgeSource = read("web/src/app/auth/reset-password/page.tsx");
 const driverLayoutSource = read("app/(driver)/_layout.tsx");
 const eas = JSON.parse(read("eas.json"));
 const config = read("app.config.ts");
@@ -45,6 +49,19 @@ assert.match(functionSource, /first_choice_provisioning_key: key/, "Trusted prov
 assert.doesNotMatch(adminInviteFormSource, /Temporary password|setPassword\(/, "Admin must not choose driver password");
 assert.match(driverLayoutSource, /DriverOnboardingForm/, "New drivers must complete onboarding before shifts");
 assert.match(driverOnboardingSource, /onboarding_completed_at/, "Onboarding saved to driver profile");
+assert.match(driverOnboardingSource, /\.select\("id, onboarding_completed_at"\)/, "Onboarding must confirm database row was updated");
+assert.match(driverOnboardingSource, /!saved\.onboarding_completed_at/, "Onboarding must verify a trusted server completion timestamp");
+assert.ok(
+  authProviderSource.indexOf("recoveryInProgressRef.current = true;") <
+    authProviderSource.indexOf("const ok = await handleSupabaseAuthUrl(url);"),
+  "Recovery must be flagged before Supabase emits the SIGNED_IN event"
+);
+assert.match(authProviderSource, /if \(recovery\) clearRecoveryFlags\(\)/, "Failed recovery token must reset recovery gate");
+assert.match(resetPasswordScreenSource, /scope: "local"/, "After updating password, end local recovery session");
+assert.match(resetPasswordScreenSource, /Could not complete the password reset/, "Password update should handle network exceptions");
+assert.match(forgotPasswordScreenSource, /Unable to send the reset request/, "Reset email request should handle network exceptions");
+assert.match(functionSource, /Array\.isArray\(payload\)/, "Reject invalid invite request JSON before processing");
+assert.match(recoveryBridgeSource, /APP_DEEP_LINK/, "Recovery email bridge must link into the native app");
 assert.match(policySource, /'driver'::public\.user_role/, "New accounts must default to driver");
 assert.doesNotMatch(policySource, /raw_user_meta_data->>'role'/, "User metadata must not set an authorization role");
 assert.match(protectedFieldsSource, /current_user IN \('authenticated', 'anon'\)/, "Only trusted operators can alter protected profile fields");
