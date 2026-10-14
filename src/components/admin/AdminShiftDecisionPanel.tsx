@@ -8,9 +8,9 @@ import {
 
 type Action = { decision: PayrollDecision; title: string; description: string };
 const ACTIONS: Action[] = [
-  { decision: "approved", title: "Approve documented minutes", description: "Counts only the minutes you enter as payable." },
+  { decision: "approved", title: "Approve or correct payable minutes", description: "Enter supported payable minutes. If already approved, this creates an audited correction." },
   { decision: "rejected", title: "Reject for payroll", description: "Excludes this record from payable totals, without erasing evidence." },
-  { decision: "test_excluded", title: "Mark as test / archive", description: "Hides test data from payable totals and review backlog. Keeps its audit trail." },
+  { decision: "test_excluded", title: "Delete from operational view (test archive)", description: "Soft deletion only: removes proven test data from payroll/reporting, but preserves original records for audit." },
   { decision: "needs_review", title: "Return to review", description: "Reopens the administrative decision, preserving previous actions." },
 ];
 
@@ -52,7 +52,7 @@ export function AdminShiftDecisionPanel({ shift, review, events, onChanged }: {
       return;
     }
     const action = ACTIONS.find((x) => x.decision === decision);
-    Alert.alert("Confirm payroll review", `${action?.title ?? "Update decision"}?\n\n${decision === "approved" ? `Payable: ${formatPayableMinutes(value)}.\n` : "No minutes will be counted as approved.\n"}The decision and explanation are permanently audited; original shift and GPS records remain unchanged.`, [
+    Alert.alert(decision === "test_excluded" ? "Archive test record (not permanent deletion)" : "Confirm payroll review", `${action?.title ?? "Update decision"}?\n\n${decision === "approved" ? `Payable: ${formatPayableMinutes(value)}.\n` : "No minutes will be counted as approved.\n"}The decision and explanation are permanently audited. Original shift and GPS records are retained; archived tests are excluded from approved totals.`, [
       { text: "Cancel", style: "cancel" },
       { text: "Confirm", onPress: () => { void (async () => {
         setBusy(true); setError(null);
@@ -104,6 +104,7 @@ export function AdminShiftDecisionPanel({ shift, review, events, onChanged }: {
         {busy ? <ActivityIndicator color="#fff" /> :
           <Text style={styles.buttonText}>Confirm decision and save audit</Text>}
       </Pressable>
+      <Text style={styles.explain}>To correct previously approved hours, select Approve or correct payable minutes, enter the corrected amount and evidence, then confirm. The original approval remains in the audit history.</Text>
       <Text style={styles.heading}>Review history</Text>
       {events.length === 0 && <Text style={styles.explain}>No payroll decision has been recorded yet.</Text>}
       {events.map((event) => (
