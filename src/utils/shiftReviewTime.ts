@@ -12,6 +12,11 @@ export function parseLocalReviewTime(dateText: string, timeText: string): Date |
   if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 ||
     parsed.getDate() !== date || parsed.getHours() !== hour || parsed.getMinutes() !== minute)
     return null;
+  // Fall-back daylight-saving hours occur twice; do not silently choose one.
+  const oneHourLater = new Date(parsed.getTime() + 3600000);
+  if (oneHourLater.getFullYear() === year && oneHourLater.getMonth() === month - 1 &&
+    oneHourLater.getDate() === date && oneHourLater.getHours() === hour &&
+    oneHourLater.getMinutes() === minute) return null;
   return parsed;
 }
 export function formatLocalReviewTime(iso: string): { date: string; time: string } {
