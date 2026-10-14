@@ -21,6 +21,16 @@ This app contains employee location and payroll-related records. Do not reopen p
 - Synthetic transactional tests passed for uninvited user rejection, trusted admin provision, one-time token consumption, driver onboarding, self-promotion prevention and GPS-base write denial. No test accounts or original profiles were modified.
 - The complete real invitation, email deliverability, deep-link, password setup, initial profile entry and physical iPhone flow still require device testing. No real employee invite was sent while testing.
 
+## Activation and recovery regression checks (2026-10-13)
+
+- Auth recovery is set **before** applying a token from email; this stops `SIGNED_IN` from routing past the "Set new password" screen.
+- A failed/expired recovery link clears recovery mode, and password/email request failures show errors rather than leaving the spinner hung.
+- Driver personal-information submission confirms that `profiles` returned a real updated row containing a server-stored onboarding timestamp. A 200 response without an updated row is not accepted as success.
+- Invitation API rejects missing/malformed JSON and reports "activation email request accepted" rather than falsely claiming inbox delivery.
+- Netlify reports the production password-reset bridge file (`auth/reset-password/index.html`) was present in the successful 2026-10-13 deployment. Still verify the actual link on iPhone; the previous web deployment is older than these mobile source changes.
+- **Must run with a consenting test email/account:** administrator creates driver, employee receives reset link (including spam check), opens it on an actual iPhone, chooses password, signs in, enters name and phone, and sees onboarding completed. The Supabase Auth redirect URL allowlist must contain `https://firstchoicetransportation.netlify.app/auth/reset-password`. Do not create fake real-world employees for testing.
+- New driver creation remains controlled by the administrator; email and device testing does not activate GPS auto-clock-out or migration 020.
+
 ## GPS return-to-base and administrator recovery
 
 - Both approved Home and Office locations may end a shift after credible GPS evidence of leaving and returning, with a sustained dwell. No employee End Shift button.
