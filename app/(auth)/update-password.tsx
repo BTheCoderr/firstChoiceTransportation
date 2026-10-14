@@ -39,10 +39,16 @@ export default function UpdatePasswordScreen() {
         setError(updateError.message);
         return;
       }
-      // End recovery session so the user lands on login and signs in with the new password
-      // (avoids auto-redirect to main app as a logged-in recovery session).
-      await supabase.auth.signOut();
+      // A successful password change should not strand the employee in the
+      // password-recovery session. Clear local auth state, then require sign-in.
+      const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+      if (signOutError) {
+        setError("Password saved, but sign-out failed. Please sign out and sign in with your new password.");
+        return;
+      }
       router.replace("/(auth)");
+    } catch {
+      setError("Could not complete the password reset. Check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }

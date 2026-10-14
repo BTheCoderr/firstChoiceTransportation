@@ -30,16 +30,22 @@ export function DriverOnboardingForm() {
     setBusy(true);
     setErrorText(null);
     try {
-      const { error } = await supabase.from("profiles").update({
+      const { data: saved, error } = await supabase.from("profiles").update({
         full_name: name,
         contact_phone: phone || null,
         onboarding_completed_at: new Date().toISOString(),
-      }).eq("id", profile.id);
-      if (error) {
-        setErrorText("Could not save your details. Try again or contact your administrator.");
+      }).eq("id", profile.id)
+        .select("id, onboarding_completed_at")
+        .single();
+
+      // A successful HTTP response without an updated row isn't a completed
+      // onboarding. RLS can prevent an update from matching any row.
+      if (error || !saved || saved.id !== profile.id ||
+        !saved.onboarding_completed_at) {
+        setErrorText("Your details were not saved. Check the connection and try again or contact your administrator.");
         return;
       }
-      // Database trigger records trusted server completion timestamp.
+      // Database trigger sets onboarding_completed_at to its server clock.
       await retryLoadProfile();
     } catch {
       setErrorText("Connection failed. Your details were not confirmed. Try again.");

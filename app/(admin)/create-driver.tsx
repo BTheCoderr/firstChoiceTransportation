@@ -37,7 +37,7 @@ export default function CreateDriverScreen() {
       }
       const message = result.activationEmailSent === false
         ? "The driver account was created, but the activation email was not sent. Check email delivery. The driver can use Forgot Password once mail is working."
-        : "The driver account was created. They'll receive an activation email to choose their own password and fill in their name and contact information.";
+        : "Driver account created. An activation email was requested. Ask the driver to check their inbox and spam folder, choose their own password, and complete their information. Confirm delivery before assigning shifts.";
       Alert.alert("Driver account created", message,
         [{ text: "OK", onPress: () => router.back() }]);
       setEmail("");

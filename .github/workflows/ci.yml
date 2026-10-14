@@ -36,6 +36,9 @@ jobs:
       - name: Release and security regression QA
         run: npm run qa:release
 
+      - name: Live invitation authorization smoke
+        run: node scripts/qa-live-invitation-endpoint.mjs
+
       - name: Website dependencies
         run: npm ci --prefix web
 

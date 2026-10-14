@@ -53,7 +53,11 @@ Deno.serve(async (request: Request) => {
       return respond({ success: false, error: "Company administrator access required." }, 403);
     }
 
-    const input = await request.json() as {
+    const payload: unknown = await request.json().catch(() => null);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return respond({ success: false, error: "Enter a driver email address." }, 400);
+    }
+    const input = payload as {
       email?: unknown; password?: unknown; full_name?: unknown;
     };
     // Old deployed clients still ask administrators for temporary passwords.
@@ -117,7 +121,7 @@ Deno.serve(async (request: Request) => {
       activationEmailSent: !mailError,
       message: mailError
         ? "Driver profile created. Activation email could not be sent. Ask driver to use Forgot Password after mail is configured."
-        : "Driver profile created. The driver will receive a link to set a password and complete their information.",
+        : "Driver profile created. Activation email request accepted. Confirm it arrives before marking onboarding complete.",
     });
   } catch (err) {
     console.error("create-driver: unexpected error", err instanceof Error ? err.message : "unknown");

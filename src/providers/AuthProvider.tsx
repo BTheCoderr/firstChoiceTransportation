@@ -205,9 +205,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const handleUrl = async (url: string | null) => {
       if (!url) return;
       const recovery = isPasswordRecoveryDeepLink(url);
+
+      // Mark recovery BEFORE applying tokens. setSession() and verifyOtp()
+      // emit SIGNED_IN, which otherwise races normal profile routing on a
+      // warm app and can redirect away from the new-password screen.
+      if (recovery) {
+        recoveryInProgressRef.current = true;
+        setRecoveryInProgress(true);
+      }
       const ok = await handleSupabaseAuthUrl(url);
 
       if (!ok) {
+        if (recovery) clearRecoveryFlags();
         if (__DEV__ && recovery) {
           console.warn(
             "[Auth deep link] Recovery URL opened but tokens were not applied (check hash, ?code=, or token_hash).",
@@ -221,9 +230,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (!recovery) return;
-
-      recoveryInProgressRef.current = true;
-      setRecoveryInProgress(true);
 
       const maxAttempts = 15;
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
