@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.shift_payroll_reviews (
   reviewed_by uuid NOT NULL REFERENCES public.profiles(id),
   reviewed_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   CONSTRAINT payroll_review_amount_consistent CHECK (
-    (decision = 'approved' AND payable_minutes BETWEEN 1 AND 1440)
+    (decision = 'approved' AND payable_minutes BETWEEN 0 AND 1440)
     OR (decision <> 'approved' AND payable_minutes IS NULL)
   )
 );
@@ -134,3 +134,45 @@ $$;
 REVOKE ALL ON FUNCTION public.admin_decide_shift_payroll(uuid,text,integer,text)
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_decide_shift_payroll(uuid,text,integer,text) TO authenticated;
+
+-- Existing admin recovery approval is already an explicit, audited decision.
+-- Mirror its audit event into the new ledger IN THE SAME TRANSACTION, never as a
+-- separate client request that could fail after approval succeeds.
+CREATE OR REPLACE FUNCTION public.record_recovered_payroll_decision()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  v_before public.shift_payroll_reviews%ROWTYPE;
+BEGIN
+  IF NEW.action <> 'approve_paid_hours' THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.approved_minutes IS NULL OR NEW.approved_minutes < 0 OR NEW.approved_minutes > 1440 THEN
+    RAISE EXCEPTION 'INVALID_RECOVERED_APPROVAL' USING ERRCODE = '22023';
+  END IF;
+  SELECT * INTO v_before FROM public.shift_payroll_reviews
+    WHERE shift_id = NEW.shift_id FOR UPDATE;
+  INSERT INTO public.shift_payroll_reviews
+    (shift_id,company_id,decision,payable_minutes,note,reviewed_by,reviewed_at)
+  VALUES (NEW.shift_id,NEW.company_id,'approved',NEW.approved_minutes,
+    NEW.note,NEW.actor_id,NEW.created_at)
+  ON CONFLICT (shift_id) DO UPDATE SET
+    decision = EXCLUDED.decision,
+    payable_minutes = EXCLUDED.payable_minutes,
+    note = EXCLUDED.note,
+    reviewed_by = EXCLUDED.reviewed_by,
+    reviewed_at = EXCLUDED.reviewed_at
+  WHERE public.shift_payroll_reviews.company_id = EXCLUDED.company_id;
+  INSERT INTO public.shift_payroll_review_events
+    (shift_id,company_id,actor_id,previous_decision,new_decision,
+     previous_payable_minutes,new_payable_minutes,note)
+  VALUES (NEW.shift_id,NEW.company_id,NEW.actor_id,v_before.decision,'approved',
+    v_before.payable_minutes,NEW.approved_minutes,NEW.note);
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.record_recovered_payroll_decision() FROM PUBLIC, anon, authenticated;
+DROP TRIGGER IF EXISTS trg_record_recovered_payroll_decision ON public.shift_review_events;
+CREATE TRIGGER trg_record_recovered_payroll_decision
+AFTER INSERT ON public.shift_review_events
+FOR EACH ROW EXECUTE FUNCTION public.record_recovered_payroll_decision();
