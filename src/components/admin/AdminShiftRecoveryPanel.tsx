@@ -54,7 +54,7 @@ export function AdminShiftRecoveryPanel({
   const confirmClosure = () => {
     const parsedEnd = parseLocalReviewTime(reviewDate, reviewClock);
     if (!parsedEnd) {
-      setErrorMessage("Enter a valid local date (YYYY-MM-DD) and clock time (HH:MM).");
+      setErrorMessage("Enter a valid local date (YYYY-MM-DD) and time (HH:MM). Ambiguous daylight-saving hours require administrator support.");
       return;
     }
     const end = parsedEnd;
