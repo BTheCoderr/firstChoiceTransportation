@@ -66,7 +66,7 @@ export default function DriverSummaryScreen() {
       }
     >
       <ScreenHeadline style={styles.headlineTight}>Recent shifts</ScreenHeadline>
-      <Caption style={styles.subtitle}>Completed and flagged shifts</Caption>
+      <Caption style={styles.subtitle}>Completed and flagged records. Displayed durations are not final payroll approvals.</Caption>
 
       {shifts.length === 0 ? (
         <View style={styles.empty}>
