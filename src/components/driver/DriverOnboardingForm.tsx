@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { colors, radii, spacing } from "@/theme/spacing";
@@ -55,13 +55,15 @@ export function DriverOnboardingForm() {
   };
 
   return (
-    <View style={styles.layout}>
+    <ScrollView contentContainerStyle={styles.layout} keyboardShouldPersistTaps="handled">
       <Text style={styles.heading}>Welcome to First Choice</Text>
       <Text style={styles.body}>
         Your administrator has created your driver account. Complete your
         information to activate your workspace. Your company and approved
         Home/Office GPS locations are managed by your administrator.
       </Text>
+      <Text style={styles.stepsTitle}>What happens next?</Text>
+      <Text style={styles.body}>1. Enter your name and optional contact number.\n2. The administrator verifies your Home/Office GPS bases.\n3. Allow background location before starting a shift.\n4. Your shift and hours can be reviewed by the office.</Text>
       <Text style={styles.label}>Account email</Text>
       <Text style={styles.email}>{profile?.email ?? "—"}</Text>
       <Text style={styles.label}>Full name</Text>
@@ -79,15 +81,19 @@ export function DriverOnboardingForm() {
         {busy ? <ActivityIndicator color="#fff" /> :
           <Text style={styles.buttonText}>Complete my driver information</Text>}
       </Pressable>
+      <Pressable onPress={() => Linking.openURL("https://firstchoicetransportation.netlify.app/support")} style={styles.signOut}>
+        <Text style={styles.signOutText}>Need help activating your account? Open support ↗</Text>
+      </Pressable>
       <Pressable disabled={busy} onPress={() => void signOut()} style={styles.signOut}>
         <Text style={styles.signOutText}>Not your account? Sign out</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  layout: { flex: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.surface },
+  layout: { flexGrow: 1, justifyContent: "center", padding: spacing.xl, backgroundColor: colors.surface },
+  stepsTitle: { fontSize: 16, fontWeight: "700", color: colors.text, marginBottom: spacing.sm },
   heading: { fontSize: 24, fontWeight: "700", color: colors.text, marginBottom: spacing.md },
   body: { fontSize: 14, lineHeight: 21, color: colors.textMuted, marginBottom: spacing.xl },
   label: { fontSize: 14, fontWeight: "600", color: colors.text, marginBottom: spacing.sm },
