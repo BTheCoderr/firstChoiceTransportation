@@ -29,6 +29,9 @@ assert.match(assessRouteEvidence(point(41.82, -71.41, 10, "2026-10-11T12:00:00Z"
 assert.equal(parseLocalReviewTime("2026-02-30", "12:00"), null);
 assert.equal(parseLocalReviewTime("2026-10-14", "25:00"), null);
 assert.equal(parseLocalReviewTime("2026-10-14", "15:45")?.getHours(), 15);
+process.env.TZ = "America/New_York";
+assert.equal(parseLocalReviewTime("2026-03-08", "02:30"), null); // spring DST gap
+assert.equal(parseLocalReviewTime("2026-11-01", "01:30"), null); // repeated fall clock hour
 assert.deepEqual(formatLocalReviewTime("2026-10-14T15:45:00Z").date.length, 10);
 const migration = read("supabase/migrations/027_admin_payroll_decisions.sql");
 assert.match(migration, /ENABLE ROW LEVEL SECURITY/g);
