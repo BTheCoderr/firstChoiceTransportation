@@ -39,6 +39,9 @@ jobs:
       - name: Live invitation authorization smoke
         run: node scripts/qa-live-invitation-endpoint.mjs
 
+      - name: Administrator review, GPS and recovery QA
+        run: npm run qa:admin-review
+
       - name: Website dependencies
         run: npm ci --prefix web
 

@@ -54,7 +54,7 @@ export function AdminShiftListItem({ item, onPress }: AdminShiftListItemProps) {
         {shift.clock_out_at ? formatTime(shift.clock_out_at) : "—"}
       </Text>
       <Text style={styles.verified}>
-        Verified: {formatMinutes(shift.verified_hours_minutes)}
+        Legacy recorded: {formatMinutes(shift.verified_hours_minutes)} · {isFlagged ? "Needs review" : "Check payroll decision"}
       </Text>
     </Pressable>
   );

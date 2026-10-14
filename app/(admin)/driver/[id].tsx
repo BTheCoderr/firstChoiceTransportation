@@ -94,7 +94,7 @@ function ShiftRow({
         )}
       </View>
       <Text style={styles.shiftVerified}>
-        Verified: {formatMinutes(shift.verified_hours_minutes)}
+        Legacy recorded: {formatMinutes(shift.verified_hours_minutes)}
       </Text>
     </Pressable>
   );

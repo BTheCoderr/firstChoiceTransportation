@@ -8,6 +8,8 @@ interface LocationWithAddressProps {
   longitude: number;
   timestamp?: string;
   label?: string;
+  accuracy?: number | null;
+  warnings?: string[];
 }
 
 export function LocationWithAddress({
@@ -15,6 +17,8 @@ export function LocationWithAddress({
   longitude,
   timestamp,
   label,
+  accuracy,
+  warnings = [],
 }: LocationWithAddressProps) {
   const [address, setAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +51,8 @@ export function LocationWithAddress({
         {displayText}
         {timestamp && <Text style={styles.time}> @ {timestamp}</Text>}
       </Text>
+      <Text style={styles.raw}>Raw GPS: {coords}{accuracy != null ? ` · accuracy: ${accuracy.toFixed(0)} m` : " · accuracy unknown"}</Text>
+      {warnings.map((warning, i) => <Text key={i} style={styles.warning}>⚠ {warning}</Text>)}
       <Pressable style={styles.mapLink} onPress={openMaps}>
         <Text style={styles.mapLinkText}>Open in Maps</Text>
       </Pressable>
@@ -71,6 +77,8 @@ const styles = StyleSheet.create({
     color: "#64748b",
     fontSize: 12,
   },
+  raw: { fontSize: 12, color: "#64748b", marginBottom: 7 },
+  warning: { fontSize: 13, lineHeight: 19, color: "#9a3412", backgroundColor: "#fff7ed", padding: 9, borderRadius: 8, marginBottom: 7 },
   mapLink: {
     alignSelf: "flex-start",
     paddingVertical: 4,

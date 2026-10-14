@@ -69,6 +69,9 @@ export default function AdminLayout() {
       />
       <Stack.Screen name="create-driver" options={adminStackScreenOptions} />
       <Stack.Screen name="weekly" options={adminStackScreenOptions} />
+      <Stack.Screen name="reviews" options={{ ...adminStackScreenOptions, title: "Shift reviews" }} />
+      <Stack.Screen name="help" options={{ ...adminStackScreenOptions, title: "Admin help" }} />
+      <Stack.Screen name="support" options={{ ...adminStackScreenOptions, title: "Support tickets" }} />
       <Stack.Screen name="driver/[id]" options={adminStackScreenOptions} />
       <Stack.Screen name="shift/[id]" options={adminStackScreenOptions} />
     </Stack>

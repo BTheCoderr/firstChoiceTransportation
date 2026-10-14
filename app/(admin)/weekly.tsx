@@ -85,7 +85,7 @@ export default function AdminWeeklyHoursScreen() {
       }
     >
       <Text style={styles.weekLabel}>{weekLabel}</Text>
-      <Text style={styles.subtitle}>Total verified hours per driver</Text>
+      <Text style={styles.subtitle}>Explicitly approved payable time only. Unreviewed, rejected and test shifts are excluded.</Text>
 
       {drivers.length === 0 ? (
         <Text style={styles.empty}>No drivers with shifts this week.</Text>
@@ -93,7 +93,7 @@ export default function AdminWeeklyHoursScreen() {
         <View style={styles.table}>
           <View style={styles.headerRow}>
             <Text style={[styles.cell, styles.cellName]}>Driver</Text>
-            <Text style={[styles.cell, styles.cellHours]}>Hours</Text>
+            <Text style={[styles.cell, styles.cellHours]}>Approved</Text>
             <Text style={[styles.cell, styles.cellShifts]}>Shifts</Text>
             <Text style={[styles.cell, styles.cellFlagged]}>Flagged</Text>
           </View>

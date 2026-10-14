@@ -13,7 +13,10 @@ import { getShiftDetail } from "@/services/admin";
 import type { ShiftDetailResult } from "@/services/admin";
 import { LocationWithAddress } from "@/components/admin/LocationWithAddress";
 import { AdminShiftRecoveryPanel } from "@/components/admin/AdminShiftRecoveryPanel";
+import { AdminShiftDecisionPanel } from "@/components/admin/AdminShiftDecisionPanel";
+import { displayApprovalStatus } from "@/services/adminPayrollReview";
 import { getMapsDirectionsUrl } from "@/services/geocoding";
+import { assessRouteEvidence } from "@/utils/gpsDiagnostics";
 import { ScreenContainer, ScreenSection } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
 import type { ShiftsRow } from "@/types/database";
@@ -147,6 +150,8 @@ export default function AdminShiftDetailScreen() {
     driverEmail,
     routePoints,
     reviewEvents,
+    payrollReview,
+    payrollEvents,
     routePointsCount,
     clientStopsCount,
   } = data;
@@ -187,17 +192,6 @@ export default function AdminShiftDetailScreen() {
         <Text style={styles.driverEmail}>{driverEmail}</Text>
       </ScreenSection>
 
-      {(shift.clock_out_at === null || reviewEvents.length > 0) && (
-        <ScreenSection title="Shift recovery and audit">
-          <AdminShiftRecoveryPanel
-            shift={shift}
-            routePoints={routePoints}
-            reviewEvents={reviewEvents}
-            onChanged={async () => { await load(); }}
-          />
-        </ScreenSection>
-      )}
-
       <ScreenSection title="Times">
         <View style={styles.card}>
           <Text style={styles.row}>
@@ -210,9 +204,10 @@ export default function AdminShiftDetailScreen() {
               : "—"}
           </Text>
           <Text style={styles.row}>
-            Verified (paid span):{" "}
+            Legacy recorded span (not proof of approval):{" "}
             {formatMinutes(shift.verified_hours_minutes)}
           </Text>
+          <Text style={styles.warnMuted}>Payroll decision: {displayApprovalStatus(shift, payrollReview)}</Text>
           <Text style={styles.helpMuted}>
             {automaticGpsClockOut
               ? "GPS confirmed the return to an approved Home or Office; the system used the arrival time rather than an employee's manual clock-out."
@@ -338,6 +333,8 @@ export default function AdminShiftDetailScreen() {
                 key={rp.id}
                 latitude={rp.latitude}
                 longitude={rp.longitude}
+                accuracy={rp.accuracy}
+                warnings={assessRouteEvidence(rp, shift)}
                 timestamp={formatTime(rp.recorded_at)}
                 label={`${i + 1}.`}
               />
@@ -371,6 +368,28 @@ export default function AdminShiftDetailScreen() {
                 </Text>
               )}
           </View>
+        </ScreenSection>
+      )}
+      <Text style={styles.warnMuted}>Before making a payroll decision, review the clock-in/out evidence, route accuracy, flags, and any employee or dispatch records above. Do not approve test or unexplained hours.</Text>
+      {(shift.clock_out_at === null || reviewEvents.length > 0) && (
+        <ScreenSection title="Shift recovery and audit">
+          <AdminShiftRecoveryPanel
+            shift={shift}
+            routePoints={routePoints}
+            reviewEvents={reviewEvents}
+            onChanged={async () => { await load(); }}
+          />
+        </ScreenSection>
+      )}
+
+      {shift.clock_out_at && (
+        <ScreenSection title="Administrator payroll review">
+          <AdminShiftDecisionPanel
+            shift={shift}
+            review={payrollReview}
+            events={payrollEvents}
+            onChanged={async () => { await load(); }}
+          />
         </ScreenSection>
       )}
     </ScreenContainer>

@@ -43,7 +43,7 @@ export function AdminWeeklySummaryCard({
       <Text style={styles.range}>{formatWeekRange(weekStart)}</Text>
       <View style={styles.stats}>
         <Text style={styles.verified}>
-          Verified: {formatMinutes(totalMinutes)}
+          Explicitly approved: {formatMinutes(totalMinutes)}
         </Text>
         <Text style={styles.count}>{shiftCount} shifts</Text>
         {flaggedCount > 0 && (
