@@ -42,7 +42,7 @@ export function AdminShiftDecisionPanel({ shift, review, events, onChanged }: {
       return;
     }
     if (decision === "approved" && (!/^\d+$/.test(minutes.trim()) ||
-      !Number.isInteger(value) || value == null || value < 1 || value > 1440 ||
+      value == null || !Number.isInteger(value) || value < 1 || value > 1440 ||
       (span != null && value > span))) {
       setError("Enter documented payable minutes (1–1,440), no more than the recorded shift span.");
       return;
