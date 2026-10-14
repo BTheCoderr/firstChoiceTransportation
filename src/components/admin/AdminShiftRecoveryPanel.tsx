@@ -8,6 +8,7 @@ import {
   type ShiftReviewEvent,
 } from "@/services/shiftRecovery";
 import { colors, radii, spacing } from "@/theme/spacing";
+import { parseLocalReviewTime, formatLocalReviewTime } from "@/utils/shiftReviewTime";
 
 const REASONS: { value: ShiftRecoveryReason; label: string }[] = [
   { value: "gps_unavailable", label: "GPS unavailable" },
@@ -29,7 +30,8 @@ export function AdminShiftRecoveryPanel({
   reviewEvents: ShiftReviewEvent[];
   onChanged: () => Promise<void>;
 }) {
-  const [endTime, setEndTime] = useState("");
+  const [reviewDate, setReviewDate] = useState("");
+  const [reviewClock, setReviewClock] = useState("");
   const [reason, setReason] = useState<ShiftRecoveryReason>("gps_unavailable");
   const [note, setNote] = useState("");
   const [approvalNote, setApprovalNote] = useState("");
@@ -50,13 +52,12 @@ export function AdminShiftRecoveryPanel({
     ));
 
   const confirmClosure = () => {
-    const trimmed = endTime.trim();
-    if (!/(?:Z|[+-]\d{2}:\d{2})$/i.test(trimmed) ||
-      !Number.isFinite(new Date(trimmed).getTime())) {
-      setErrorMessage("Enter a complete ISO date/time with Z or a timezone offset.");
+    const parsedEnd = parseLocalReviewTime(reviewDate, reviewClock);
+    if (!parsedEnd) {
+      setErrorMessage("Enter a valid local date (YYYY-MM-DD) and clock time (HH:MM).");
       return;
     }
-    const end = new Date(trimmed);
+    const end = parsedEnd;
     const start = new Date(shift.clock_in_at);
     if (end < start || end > new Date() ||
       end.getTime() > start.getTime() + 24 * 3600000) {
@@ -69,7 +70,7 @@ export function AdminShiftRecoveryPanel({
     }
     Alert.alert(
       "Close this shift for review?",
-      "This unlocks the driver's next shift but does NOT approve payroll. The chosen time and your explanation will be permanently audited.",
+      `Reviewed end: ${end.toLocaleString()} (${end.toISOString()}). This releases the driver but does NOT approve payroll. Your documented decision is permanently audited.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -143,20 +144,18 @@ export function AdminShiftRecoveryPanel({
           </Text>
           <Text style={styles.label}>Clock-in (local time)</Text>
           <Text style={styles.body}>{displayTime(shift.clock_in_at)}</Text>
-          <Text style={styles.label}>Reviewed end time (ISO 8601 with timezone)</Text>
-          <TextInput
-            value={endTime}
-            onChangeText={setEndTime}
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel="Reviewed end time"
-            placeholder="2026-10-13T15:30:00-04:00"
-            placeholderTextColor="#64748b"
-            style={styles.input}
-          />
+          <Text style={styles.label}>Reviewed end date (local time)</Text>
+          <TextInput value={reviewDate} onChangeText={setReviewDate}
+            accessibilityLabel="Reviewed end date" placeholder="YYYY-MM-DD"
+            placeholderTextColor="#64748b" autoCorrect={false} style={styles.input} />
+          <Text style={styles.label}>Reviewed end time (24-hour local clock)</Text>
+          <TextInput value={reviewClock} onChangeText={setReviewClock}
+            accessibilityLabel="Reviewed end time" placeholder="HH:MM (example 17:30)"
+            placeholderTextColor="#64748b" autoCorrect={false} style={styles.input} />
+          <Text style={styles.hint}>Time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone || "device local"}. Confirm the end time against GPS and other evidence before saving.</Text>
           {suggestedTime && (
             <Pressable
-              onPress={() => setEndTime(new Date(suggestedTime).toISOString())}
+              onPress={() => { const candidate = formatLocalReviewTime(suggestedTime); setReviewDate(candidate.date); setReviewClock(candidate.time); }}
               accessibilityRole="button"
               style={styles.secondary}
             >
