@@ -1,7 +1,7 @@
 # First Choice administrator review / support rollout
 
 The old iPhone preview (1.0.1 build 20) DOES NOT contain these screens.
-Pull request #10 stages the implementation. **Do not apply migrations to the wrong Supabase project.**
+Pull request #10 stages the iOS app code. **Database migrations 027 and 028 were applied on 2026-10-14 to the confirmed firstchoice project `xxrxzpktxeaplsnatcvn`.**
 
 ## Current scope
 - Existing administrator recovery: close stuck OPEN shift for review; independently approve payable minutes.
@@ -34,7 +34,7 @@ Admin operations: **Shift Review Center** groups open, flagged, payroll pending,
 
 ## Residual release gates
 - Native picker and support screens have not yet been validated on a physical iPhone.
-- Live Supabase project is not connected to the available database connector. Migrations 027 and 028 remain undeployed.
+- Both migrations were deployed successfully to the existing firstchoice project; RLS and function ACLs were verified read-only. No first-use ticket or payroll decision has been recorded yet. The `firstchoice_archive.pre_review_support_rollout_snapshot` private table contains 72 rows. Test actual role isolation from admin and driver accounts before inviting additional staff.
 - Company policy on employee data retention, payroll audit, and deletion must be confirmed.
 - Existing dependency advisories need separate remediation; never run `npm audit fix --force` on Expo SDK54.
 - Support tickets do not yet send email/push notifications or accept file attachments. These require additional privacy and infrastructure review.
