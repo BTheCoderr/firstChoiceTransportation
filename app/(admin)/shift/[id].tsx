@@ -16,6 +16,7 @@ import { AdminShiftRecoveryPanel } from "@/components/admin/AdminShiftRecoveryPa
 import { AdminShiftDecisionPanel } from "@/components/admin/AdminShiftDecisionPanel";
 import { displayApprovalStatus } from "@/services/adminPayrollReview";
 import { getMapsDirectionsUrl } from "@/services/geocoding";
+import { assessRouteEvidence } from "@/utils/gpsDiagnostics";
 import { ScreenContainer, ScreenSection } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
 import type { ShiftsRow } from "@/types/database";
@@ -353,6 +354,8 @@ export default function AdminShiftDetailScreen() {
                 key={rp.id}
                 latitude={rp.latitude}
                 longitude={rp.longitude}
+                accuracy={rp.accuracy}
+                warnings={assessRouteEvidence(rp, shift)}
                 timestamp={formatTime(rp.recorded_at)}
                 label={`${i + 1}.`}
               />
