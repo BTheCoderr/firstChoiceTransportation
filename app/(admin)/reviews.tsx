@@ -2,14 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { SINGLE_COMPANY_ID } from "@/constants/company";
+import { getOpenCompanyShifts, getPendingCompanyPayrollShifts } from "@/services/admin";
 import { ScreenContainer } from "@/components/layout";
 import {
   getReviewableCompanyShifts, displayApprovalStatus, formatPayableMinutes,
   type ReviewableShift,
 } from "@/services/adminPayrollReview";
 
-type Filter = "unreviewed" | "approved" | "rejected" | "test_excluded" | "all";
+type Filter = "open" | "flagged" | "pending" | "unreviewed" | "approved" | "rejected" | "test_excluded" | "all";
 const FILTERS: { value: Filter; label: string }[] = [
+  { value: "open", label: "Open" },
+  { value: "flagged", label: "Flagged" },
+  { value: "pending", label: "Pending payroll" },
   { value: "unreviewed", label: "Needs review" },
   { value: "approved", label: "Approved" },
   { value: "rejected", label: "Rejected" },
@@ -27,7 +31,20 @@ export default function AdminReviewCenterScreen() {
   const refresh = useCallback(async () => {
     try {
       setError(null);
-      setRows(await getReviewableCompanyShifts(SINGLE_COMPANY_ID));
+      const [closed, open, pending] = await Promise.all([
+        getReviewableCompanyShifts(SINGLE_COMPANY_ID),
+        getOpenCompanyShifts(SINGLE_COMPANY_ID),
+        getPendingCompanyPayrollShifts(SINGLE_COMPANY_ID),
+      ]);
+      const entries = new Map(closed.map((record) => [record.shift.id, record]));
+      for (const record of [...open, ...pending]) {
+        if (!entries.has(record.shift.id)) {
+          entries.set(record.shift.id, {
+            shift: record.shift, driverName: record.driverName, review: null,
+          });
+        }
+      }
+      setRows([...entries.values()]);
     } catch {
       setError("The secure payroll review ledger is not available. Migration 027 must be reviewed and deployed by an administrator before decisions are enabled. Existing records were not changed.");
     } finally {
@@ -37,8 +54,16 @@ export default function AdminReviewCenterScreen() {
 
   useEffect(() => { void refresh(); }, [refresh]);
   const shown = useMemo(() => rows.filter((item) => {
+    const shift = item.shift;
+    const pending = shift.clock_out_at != null &&
+      shift.verified_hours_minutes == null &&
+      shift.suspicious_details?.shift_recovery === "closed_pending_payroll_review";
     if (filter === "all") return true;
-    if (filter === "unreviewed") return !item.review || item.review.decision === "needs_review";
+    if (filter === "open") return shift.clock_out_at == null;
+    if (filter === "pending") return pending;
+    if (filter === "flagged") return shift.flagged_at != null;
+    if (filter === "unreviewed") return shift.clock_out_at != null && !pending &&
+      (!item.review || item.review.decision === "needs_review");
     return item.review?.decision === filter;
   }), [filter, rows]);
 
@@ -56,7 +81,7 @@ export default function AdminReviewCenterScreen() {
       <View style={styles.summary}>
         <Text style={styles.summaryText}>Records loaded: {rows.length}</Text>
         <Text style={styles.summaryText}>Explicitly approved: {formatPayableMinutes(approvedMinutes)}</Text>
-        <Text style={styles.hint}>Up to 200 recent closed records are shown. Reports must not treat unreviewed, rejected or test records as approved.</Text>
+        <Text style={styles.hint}>Up to 200 recent closed, 50 open and 100 pending-recovery records are shown. Reports must not treat unreviewed, rejected or test records as approved.</Text>
       </View>
       {loading && <ActivityIndicator />}
       {error && <Text style={styles.error}>{error}</Text>}
@@ -80,7 +105,9 @@ export default function AdminReviewCenterScreen() {
           <Text style={styles.body}>{new Date(shift.clock_in_at).toLocaleDateString()} · {shift.status}</Text>
           <Text style={styles.body}>Original recorded: {formatPayableMinutes(shift.verified_hours_minutes)}</Text>
           <Text style={[styles.body, review?.decision === "approved" ? styles.approved : styles.warning]}>
-            {displayApprovalStatus(shift, review)}
+            {shift.clock_out_at && shift.verified_hours_minutes == null &&
+            shift.suspicious_details?.shift_recovery === "closed_pending_payroll_review"
+              ? "Payroll approval pending after shift recovery" : displayApprovalStatus(shift, review)}
           </Text>
           <Text style={styles.link}>Review evidence and decision →</Text>
         </Pressable>
