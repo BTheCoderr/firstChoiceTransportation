@@ -54,6 +54,8 @@ export default function ForgotPasswordScreen() {
       setMessage(
         "If an account exists for that email, you will receive a link to reset your password. Open it on this device to continue."
       );
+    } catch {
+      setError("Unable to send the reset request. Check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }
