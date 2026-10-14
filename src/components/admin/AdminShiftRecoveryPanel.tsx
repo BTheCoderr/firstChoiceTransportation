@@ -8,7 +8,7 @@ import {
   type ShiftReviewEvent,
 } from "@/services/shiftRecovery";
 import { colors, radii, spacing } from "@/theme/spacing";
-import { parseLocalReviewTime, formatLocalReviewTime } from "@/utils/shiftReviewTime";
+import { ReviewedEndTimePicker } from "@/components/admin/ReviewedEndTimePicker";
 
 const REASONS: { value: ShiftRecoveryReason; label: string }[] = [
   { value: "gps_unavailable", label: "GPS unavailable" },
@@ -30,8 +30,7 @@ export function AdminShiftRecoveryPanel({
   reviewEvents: ShiftReviewEvent[];
   onChanged: () => Promise<void>;
 }) {
-  const [reviewDate, setReviewDate] = useState("");
-  const [reviewClock, setReviewClock] = useState("");
+  const [reviewedEnd, setReviewedEnd] = useState<Date | null>(null);
   const [reason, setReason] = useState<ShiftRecoveryReason>("gps_unavailable");
   const [note, setNote] = useState("");
   const [approvalNote, setApprovalNote] = useState("");
@@ -52,12 +51,11 @@ export function AdminShiftRecoveryPanel({
     ));
 
   const confirmClosure = () => {
-    const parsedEnd = parseLocalReviewTime(reviewDate, reviewClock);
-    if (!parsedEnd) {
-      setErrorMessage("Enter a valid local date (YYYY-MM-DD) and time (HH:MM). Ambiguous daylight-saving hours require administrator support.");
+    if (!reviewedEnd || !Number.isFinite(reviewedEnd.getTime())) {
+      setErrorMessage("Select and confirm an evidence-supported end time.");
       return;
     }
-    const end = parsedEnd;
+    const end = reviewedEnd;
     const start = new Date(shift.clock_in_at);
     if (end < start || end > new Date() ||
       end.getTime() > start.getTime() + 24 * 3600000) {
@@ -144,18 +142,11 @@ export function AdminShiftRecoveryPanel({
           </Text>
           <Text style={styles.label}>Clock-in (local time)</Text>
           <Text style={styles.body}>{displayTime(shift.clock_in_at)}</Text>
-          <Text style={styles.label}>Reviewed end date (local time)</Text>
-          <TextInput value={reviewDate} onChangeText={setReviewDate}
-            accessibilityLabel="Reviewed end date" placeholder="YYYY-MM-DD"
-            placeholderTextColor="#64748b" autoCorrect={false} style={styles.input} />
-          <Text style={styles.label}>Reviewed end time (24-hour local clock)</Text>
-          <TextInput value={reviewClock} onChangeText={setReviewClock}
-            accessibilityLabel="Reviewed end time" placeholder="HH:MM (example 17:30)"
-            placeholderTextColor="#64748b" autoCorrect={false} style={styles.input} />
-          <Text style={styles.hint}>Time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone || "device local"}. Confirm the end time against GPS and other evidence before saving.</Text>
+          <ReviewedEndTimePicker clockIn={shift.clock_in_at}
+            value={reviewedEnd} onChange={setReviewedEnd} />
           {suggestedTime && (
             <Pressable
-              onPress={() => { const candidate = formatLocalReviewTime(suggestedTime); setReviewDate(candidate.date); setReviewClock(candidate.time); }}
+              onPress={() => { const candidate = new Date(suggestedTime); if (Number.isFinite(candidate.getTime())) setReviewedEnd(candidate); }}
               accessibilityRole="button"
               style={styles.secondary}
             >
