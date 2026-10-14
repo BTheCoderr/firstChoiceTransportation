@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
 import { ScreenContainer } from "@/components/layout";
 
 type Entry = { title: string; body: string };
@@ -25,6 +26,7 @@ const admin: Entry[] = [
 ];
 export function HelpGuide({ role }: { role: "admin" | "driver" }) {
   const entries = role === "admin" ? admin : driver;
+  const router = useRouter();
   const [expanded, setExpanded] = useState<number[]>([0]);
   return (
     <ScreenContainer>
@@ -43,8 +45,8 @@ export function HelpGuide({ role }: { role: "admin" | "driver" }) {
           </View>
         );
       })}
-      <Pressable style={styles.support} onPress={() => Linking.openURL("https://firstchoicetransportation.netlify.app/support")}>
-        <Text style={styles.supportLabel}>Open support and contact information ↗</Text>
+      <Pressable style={styles.support} onPress={() => router.push(role === "admin" ? "/(admin)/support" : "/(driver)/support")}>
+        <Text style={styles.supportLabel}>Open in-app support requests →</Text>
       </Pressable>
       <Text style={styles.note}>This guide explains the current pilot workflow. Administrators must verify any disputed hours against supporting evidence.</Text>
     </ScreenContainer>
