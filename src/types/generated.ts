@@ -199,6 +199,75 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_payroll_reviews: {
+        Row: {
+          shift_id: string
+          company_id: string
+          decision: string
+          payable_minutes: number | null
+          note: string
+          reviewed_by: string
+          reviewed_at: string
+        }
+        Insert: {
+          shift_id: string
+          company_id: string
+          decision: string
+          payable_minutes?: number | null
+          note: string
+          reviewed_by: string
+          reviewed_at?: string
+        }
+        Update: {
+          shift_id?: string
+          company_id?: string
+          decision?: string
+          payable_minutes?: number | null
+          note?: string
+          reviewed_by?: string
+          reviewed_at?: string
+        }
+        Relationships: []
+      }
+      shift_payroll_review_events: {
+        Row: {
+          id: string
+          shift_id: string
+          company_id: string
+          actor_id: string
+          previous_decision: string | null
+          new_decision: string
+          previous_payable_minutes: number | null
+          new_payable_minutes: number | null
+          note: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          shift_id: string
+          company_id: string
+          actor_id: string
+          previous_decision?: string | null
+          new_decision: string
+          previous_payable_minutes?: number | null
+          new_payable_minutes?: number | null
+          note: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          shift_id?: string
+          company_id?: string
+          actor_id?: string
+          previous_decision?: string | null
+          new_decision?: string
+          previous_payable_minutes?: number | null
+          new_payable_minutes?: number | null
+          note?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_id: string | null
@@ -530,6 +599,11 @@ export type Database = {
       _gps_distance_m: {
         Args: { lat_a: number; lat_b: number; lon_a: number; lon_b: number }
         Returns: number
+      }
+      admin_decide_shift_payroll: {
+        Args: { p_shift_id: string; p_decision: string; p_payable_minutes: number | null; p_note: string }
+        Returns: Database["public"]["Tables"]["shift_payroll_reviews"]["Row"]
+        SetofOptions: { from: "*"; to: "shift_payroll_reviews"; isOneToOne: true; isSetofReturn: false }
       }
       admin_approve_recovered_shift_hours: {
         Args: { p_note: string; p_shift_id: string }
