@@ -40,6 +40,7 @@ export default function AdminDashboardScreen() {
   const handleWeeklyHours = () => router.push("/(admin)/weekly");
   const handleReviews = () => router.push("/(admin)/reviews");
   const handleHelp = () => router.push("/(admin)/help");
+  const handleSupport = () => router.push("/(admin)/support");
 
   return (
     <ScreenContainer
@@ -81,6 +82,10 @@ export default function AdminDashboardScreen() {
         <Pressable style={[styles.outlineButton, { marginTop: 12 }]} onPress={handleHelp}
           accessibilityRole="button" accessibilityLabel="Administrator help and training">
           <Text style={styles.outlineButtonText}>Help & Training</Text>
+        </Pressable>
+        <Pressable style={[styles.outlineButton, { marginTop: 12 }]} onPress={handleSupport}
+          accessibilityRole="button" accessibilityLabel="Administrator support cases">
+          <Text style={styles.outlineButtonText}>Support Cases</Text>
         </Pressable>
       </AppSurface>
 
