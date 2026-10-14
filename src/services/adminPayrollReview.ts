@@ -98,7 +98,7 @@ export async function decideShiftPayroll(input: {
   if (note.length < 20 || note.length > 1200)
     return { ok: false, message: "Explain your decision in 20–1,200 characters." };
   if (input.decision === "approved") {
-    if (!Number.isInteger(input.payableMinutes) || input.payableMinutes == null
+    if (input.payableMinutes == null || !Number.isInteger(input.payableMinutes)
       || input.payableMinutes < 1 || input.payableMinutes > 1440)
       return { ok: false, message: "Enter 1 to 1,440 documented payable minutes." };
   } else if (input.payableMinutes !== null) {
