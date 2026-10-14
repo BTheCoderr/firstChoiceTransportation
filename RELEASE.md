@@ -31,6 +31,17 @@ This app contains employee location and payroll-related records. Do not reopen p
 - **Must run with a consenting test email/account:** administrator creates driver, employee receives reset link (including spam check), opens it on an actual iPhone, chooses password, signs in, enters name and phone, and sees onboarding completed. The Supabase Auth redirect URL allowlist must contain `https://firstchoicetransportation.netlify.app/auth/reset-password`. Do not create fake real-world employees for testing.
 - New driver creation remains controlled by the administrator; email and device testing does not activate GPS auto-clock-out or migration 020.
 
+## October 14 administrator shift-review pilot (branch-only, NOT DEPLOYED)
+
+- iPhone screenshots exposed legacy flagged shift spans of 895h 15m and 1162h 28m, plus a GPS point reverse-geocoded as Beijing. These are **uninvestigated historical records**. Nothing has been deleted, corrected, paid or assumed to be test data.
+- Migration **027_admin_payroll_decisions.sql** adds admin-only company-scoped decisions for closed records: documented payable-minute approval, reject, mark test/excluded, and return to review. Every change creates an append-only review event, and no historical shift values are rewritten.
+- **Migration 027 has not been applied.** Before deploying: back up relevant tables, review SQL and existing RLS/permissions, coordinate rollout, and inspect existing payroll exports and reports. There is no database connector access to the First Choice project's production organization in this session.
+- The new Shift Review Center is a 200-most-recent CLOSED-shift review tool; it is not a complete historical export. Legacy recorded values are evidence, not payable-hour authorizations. Only explicit ledger approvals count in the updated admin weekly totals. When the ledger is unavailable, the display fails closed to zero rather than reusing suspicious recorded hours. Do not interpret this zero as a definitive payroll balance until migration 027 is installed.
+- The existing open-shift recovery workflow is separate: close with a supported, documented end time (within 24h of clock-in), then independently approve recovered minutes. The new decision RPC blocks approval of an unresolved recovered shift.
+- Unusual GPS readings now display original coordinates, accuracy and advisory warning text. Outlier detection is NOT evidence of wrongdoing, is never used to auto-close a shift, and never changes payroll.
+- Review iOS UI, local date/time validation including DST, administrator review/role authorization, driver tab help, support links and old-shift accuracy on a physical device.
+- Do not submit a new EAS build, merge this branch, deploy migration 027, enable geofence auto-clockout, or bulk-modify any production shift until verified and approved.
+
 ## GPS return-to-base and administrator recovery
 
 - Both approved Home and Office locations may end a shift after credible GPS evidence of leaving and returning, with a sustained dwell. No employee End Shift button.
