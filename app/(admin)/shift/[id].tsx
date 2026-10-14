@@ -13,6 +13,8 @@ import { getShiftDetail } from "@/services/admin";
 import type { ShiftDetailResult } from "@/services/admin";
 import { LocationWithAddress } from "@/components/admin/LocationWithAddress";
 import { AdminShiftRecoveryPanel } from "@/components/admin/AdminShiftRecoveryPanel";
+import { AdminShiftDecisionPanel } from "@/components/admin/AdminShiftDecisionPanel";
+import { displayApprovalStatus } from "@/services/adminPayrollReview";
 import { getMapsDirectionsUrl } from "@/services/geocoding";
 import { ScreenContainer, ScreenSection } from "@/components/layout";
 import { colors, radii, spacing } from "@/theme/spacing";
@@ -147,6 +149,8 @@ export default function AdminShiftDetailScreen() {
     driverEmail,
     routePoints,
     reviewEvents,
+    payrollReview,
+    payrollEvents,
     routePointsCount,
     clientStopsCount,
   } = data;
@@ -198,6 +202,16 @@ export default function AdminShiftDetailScreen() {
         </ScreenSection>
       )}
 
+      {shift.clock_out_at && (
+        <ScreenSection title="Administrator payroll review">
+          <AdminShiftDecisionPanel
+            shift={shift}
+            review={payrollReview}
+            events={payrollEvents}
+            onChanged={async () => { await load(); }}
+          />
+        </ScreenSection>
+      )}
       <ScreenSection title="Times">
         <View style={styles.card}>
           <Text style={styles.row}>
@@ -210,9 +224,10 @@ export default function AdminShiftDetailScreen() {
               : "—"}
           </Text>
           <Text style={styles.row}>
-            Verified (paid span):{" "}
+            Legacy recorded span (not proof of approval):{" "}
             {formatMinutes(shift.verified_hours_minutes)}
           </Text>
+          <Text style={styles.warnMuted}>Payroll decision: {displayApprovalStatus(shift, payrollReview)}</Text>
           <Text style={styles.helpMuted}>
             {automaticGpsClockOut
               ? "GPS confirmed the return to an approved Home or Office; the system used the arrival time rather than an employee's manual clock-out."
