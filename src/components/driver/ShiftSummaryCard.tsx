@@ -71,13 +71,13 @@ export function ShiftSummaryCard({ shift }: ShiftSummaryCardProps) {
         )}
       </View>
       <Text style={styles.verified}>
-        Verified (paid span):{" "}
+        Recorded duration (subject to admin review):{" "}
         {formatMinutes(shift.verified_hours_minutes)}
       </Text>
       {shift.estimated_return_minutes != null ? (
         <>
           <Text style={styles.returnAudit}>
-            Return-to-base (paid minutes):{" "}
+            Recorded return estimate:{" "}
             <Text style={styles.returnAuditBold}>
               {shift.estimated_return_minutes} min
             </Text>{" "}
@@ -85,7 +85,7 @@ export function ShiftSummaryCard({ shift }: ShiftSummaryCardProps) {
           </Text>
           {etaMissing ? (
             <Text style={styles.returnNote}>
-              Return drive time could not be estimated; recorded as 0 min—paid end
+              Return drive time could not be estimated; recorded as 0 min—the calculated end
               time matches last dropoff.
             </Text>
           ) : null}
