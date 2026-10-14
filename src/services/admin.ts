@@ -9,6 +9,8 @@ import type {
 import type { AdminDriverListItem, DriverBaseSettings } from "@/types/app";
 import { getDriverBaseSettings } from "@/services/driverBases";
 import type { ShiftReviewEvent } from "@/services/shiftRecovery";
+import { getPayrollReviews, getPayrollReview, getPayrollReviewEvents } from "@/services/adminPayrollReview";
+import type { PayrollReview, PayrollReviewEvent } from "@/services/adminPayrollReview";
 
 /** UTC Monday boundary, shared by dashboard and driver detail. */
 function getWeekStart(date: Date): string {
@@ -52,6 +54,8 @@ export interface ShiftDetailResult {
   routePointsCount: number;
   clientStopsCount: number;
   reviewEvents: ShiftReviewEvent[];
+  payrollReview: PayrollReview | null;
+  payrollEvents: PayrollReviewEvent[];
 }
 
 /**
@@ -75,7 +79,7 @@ export async function getCompanyDriversWithWeeklyStats(
   const profiles = profilesData as Pick<ProfilesRow, "id" | "full_name" | "email" | "role">[];
   const { data: shiftsData, error: shiftsError } = await supabase
     .from("shifts")
-    .select("driver_id, verified_hours_minutes, flagged_at")
+    .select("id, driver_id, verified_hours_minutes, flagged_at")
     .eq("company_id", companyId)
     .in("status", ["completed", "flagged"])
     .gte("clock_in_at", `${weekStart}T00:00:00`)
@@ -83,7 +87,11 @@ export async function getCompanyDriversWithWeeklyStats(
 
   if (shiftsError) return [];
 
-  const shifts = (shiftsData ?? []) as Pick<ShiftsRow, "driver_id" | "verified_hours_minutes" | "flagged_at">[];
+  const shifts = (shiftsData ?? []) as Pick<ShiftsRow, "id" | "driver_id" | "verified_hours_minutes" | "flagged_at">[];
+  // Only explicit payroll decisions count. Legacy "verified" fields are NOT approval.
+  const reviews = await getPayrollReviews(companyId).catch(() => []);
+  const approved = new Map(reviews.filter((r) => r.decision === "approved")
+    .map((r) => [r.shift_id, r.payable_minutes ?? 0]));
 
   const statsByDriver: Record<
     string,
@@ -97,7 +105,7 @@ export async function getCompanyDriversWithWeeklyStats(
   for (const s of shifts) {
     const cur = statsByDriver[s.driver_id];
     if (!cur) continue;
-    cur.minutes += s.verified_hours_minutes ?? 0;
+    cur.minutes += approved.get(s.id) ?? 0;
     cur.shiftCount += 1;
     if (s.flagged_at != null) cur.flaggedCount += 1;
   }
@@ -234,7 +242,7 @@ export async function getDriverDetail(
   const weekStart = getWeekStart(new Date());
   const weekEnd = getWeekEndExclusive(weekStart);
 
-  const [baseSettings, shiftsRes, weeklyRes] = await Promise.all([
+  const [baseSettings, shiftsRes, weeklyRes, payrollReviews] = await Promise.all([
     getDriverBaseSettings(driverId),
     supabase
       .from("shifts")
@@ -244,21 +252,24 @@ export async function getDriverDetail(
       .limit(10),
     supabase
       .from("shifts")
-      .select("verified_hours_minutes, flagged_at")
+      .select("id, verified_hours_minutes, flagged_at")
       .eq("driver_id", driverId)
       .eq("company_id", SINGLE_COMPANY_ID)
       .in("status", ["completed", "flagged"])
       .gte("clock_in_at", `${weekStart}T00:00:00`)
       .lt("clock_in_at", weekEnd),
+    getPayrollReviews(SINGLE_COMPANY_ID).catch(() => []),
   ]);
   const recentShifts = (shiftsRes.data ?? []) as ShiftsRow[];
   const weeklyShifts = weeklyRes.data ?? [];
 
+  const approvedByShift = new Map(payrollReviews.filter((r) => r.decision === "approved")
+    .map((r) => [r.shift_id, r.payable_minutes ?? 0]));
   let weeklyMinutes = 0;
   let weeklyShiftCount = weeklyShifts.length;
   let weeklyFlaggedCount = 0;
   for (const s of weeklyShifts) {
-    weeklyMinutes += (s as { verified_hours_minutes?: number }).verified_hours_minutes ?? 0;
+    weeklyMinutes += approvedByShift.get((s as { id: string }).id) ?? 0;
     if ((s as { flagged_at?: string | null }).flagged_at) weeklyFlaggedCount += 1;
   }
 
@@ -317,7 +328,7 @@ export async function getShiftDetail(
   const driverName = profile?.full_name ?? "Unknown";
   const driverEmail = profile?.email ?? "";
 
-  const [routeRes, stopsRes, auditRes] = await Promise.all([
+  const [routeRes, stopsRes, auditRes, payrollReview, payrollEvents] = await Promise.all([
     supabase
       .from("route_points")
       .select("*")
@@ -333,6 +344,8 @@ export async function getShiftDetail(
       .select("*")
       .eq("shift_id", shiftId)
       .order("created_at", { ascending: false }),
+    getPayrollReview(shiftId).catch(() => null),
+    getPayrollReviewEvents(shiftId).catch(() => []),
   ]);
 
   const routePoints = (routeRes.data ?? []) as RoutePointsRow[];
@@ -347,5 +360,7 @@ export async function getShiftDetail(
     routePointsCount: routePoints.length,
     clientStopsCount: clientStops.length,
     reviewEvents: (auditRes.data ?? []) as ShiftReviewEvent[],
+    payrollReview,
+    payrollEvents,
   };
 }
