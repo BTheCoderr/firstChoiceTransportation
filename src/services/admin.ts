@@ -89,7 +89,9 @@ export async function getCompanyDriversWithWeeklyStats(
 
   const shifts = (shiftsData ?? []) as Pick<ShiftsRow, "id" | "driver_id" | "verified_hours_minutes" | "flagged_at">[];
   // Only explicit payroll decisions count. Legacy "verified" fields are NOT approval.
-  const reviews = await getPayrollReviews(companyId).catch(() => []);
+  const reviews = await getPayrollReviews(companyId);
+  const excluded = new Set(reviews.filter((r) => r.decision === "rejected" || r.decision === "test_excluded")
+    .map((r) => r.shift_id));
   const approved = new Map(reviews.filter((r) => r.decision === "approved")
     .map((r) => [r.shift_id, r.payable_minutes ?? 0]));
 
@@ -104,7 +106,7 @@ export async function getCompanyDriversWithWeeklyStats(
 
   for (const s of shifts) {
     const cur = statsByDriver[s.driver_id];
-    if (!cur) continue;
+    if (!cur || excluded.has(s.id)) continue;
     cur.minutes += approved.get(s.id) ?? 0;
     cur.shiftCount += 1;
     if (s.flagged_at != null) cur.flaggedCount += 1;
@@ -201,7 +203,10 @@ export async function getRecentCompanyShifts(
 
   if (shiftsError || !shifts) return [];
 
-  const driverIds = [...new Set((shifts as ShiftsRow[]).map((s) => s.driver_id))];
+  const reviewData = await getPayrollReviews(companyId);
+  const operational = (shifts as ShiftsRow[]).filter((s) =>
+    !reviewData.some((r) => r.shift_id === s.id && (r.decision === "test_excluded" || r.decision === "rejected")));
+  const driverIds = [...new Set(operational.map((s) => s.driver_id))];
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, full_name, email")
@@ -214,7 +219,7 @@ export async function getRecentCompanyShifts(
     ])
   );
 
-  return (shifts as ShiftsRow[]).map((shift) => {
+  return operational.map((shift) => {
     const p = profileMap.get(shift.driver_id);
     return {
       shift,
@@ -258,7 +263,7 @@ export async function getDriverDetail(
       .in("status", ["completed", "flagged"])
       .gte("clock_in_at", `${weekStart}T00:00:00`)
       .lt("clock_in_at", weekEnd),
-    getPayrollReviews(SINGLE_COMPANY_ID).catch(() => []),
+    getPayrollReviews(SINGLE_COMPANY_ID),
   ]);
   const recentShifts = (shiftsRes.data ?? []) as ShiftsRow[];
   const weeklyShifts = weeklyRes.data ?? [];
@@ -266,9 +271,12 @@ export async function getDriverDetail(
   const approvedByShift = new Map(payrollReviews.filter((r) => r.decision === "approved")
     .map((r) => [r.shift_id, r.payable_minutes ?? 0]));
   let weeklyMinutes = 0;
-  let weeklyShiftCount = weeklyShifts.length;
+  const excludedByShift = new Set(payrollReviews.filter((r) => r.decision === "rejected" || r.decision === "test_excluded").map((r) => r.shift_id));
+  let weeklyShiftCount = 0;
   let weeklyFlaggedCount = 0;
   for (const s of weeklyShifts) {
+    if (excludedByShift.has((s as { id: string }).id)) continue;
+    weeklyShiftCount += 1;
     weeklyMinutes += approvedByShift.get((s as { id: string }).id) ?? 0;
     if ((s as { flagged_at?: string | null }).flagged_at) weeklyFlaggedCount += 1;
   }
