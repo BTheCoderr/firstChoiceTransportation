@@ -94,6 +94,7 @@ export default function DriverLayout() {
           }}
         />
         <Tabs.Screen name="help" options={{ title: "Help", tabBarLabel: "Help" }} />
+        <Tabs.Screen name="support" options={{ href: null, title: "Support" }} />
         <Tabs.Screen
           name="profile"
           options={{
