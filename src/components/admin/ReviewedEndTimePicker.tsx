@@ -12,22 +12,30 @@ export function ReviewedEndTimePicker({
   onChange: (date: Date) => void;
 }) {
   const [visibleMode, setVisibleMode] = useState<Mode | null>(null);
+  const [draft, setDraft] = useState<Date | null>(null);
   const start = new Date(clockIn);
   const end = new Date(Math.min(Date.now(), start.getTime() + 24 * 60 * 60 * 1000));
   const fallback = new Date(Math.min(end.getTime(), start.getTime() + 60 * 60 * 1000));
-  const selected = value ?? fallback;
+  const selected = draft ?? value ?? fallback;
   const validBounds = Number.isFinite(start.getTime()) && end >= start;
 
-  const choose = (mode: Mode, next: Date) => {
-    if (Platform.OS !== "ios") setVisibleMode(null);
+  const combine = (mode: Mode, next: Date) => {
     const combined = new Date(selected);
     if (mode === "date") {
       combined.setFullYear(next.getFullYear(), next.getMonth(), next.getDate());
     } else {
       combined.setHours(next.getHours(), next.getMinutes(), 0, 0);
     }
-    if (combined >= start && combined <= end) onChange(combined);
-    // Out-of-range selections require choosing a valid date/time; never silently clamp to a payroll timestamp.
+    return combined;
+  };
+
+  const commit = (next: Date) => {
+    if (next >= start && next <= end) {
+      onChange(next);
+      setDraft(null);
+      return;
+    }
+    setDraft(next);
   };
 
   if (!validBounds) {
@@ -52,18 +60,28 @@ export function ReviewedEndTimePicker({
             mode={visibleMode}
             display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={(event, date) => {
-              if (event.type === "dismissed") {
+              if (event.type === "dismissed" || !date) {
                 setVisibleMode(null);
+                setDraft(null);
                 return;
               }
-              if (date) choose(visibleMode, date);
+              const next = combine(visibleMode, date);
+              if (Platform.OS === "ios") {
+                setDraft(next);
+                return;
+              }
+              setVisibleMode(null);
+              commit(next);
             }}
             minimumDate={visibleMode === "date" ? start : undefined}
             maximumDate={visibleMode === "date" ? end : undefined}
             is24Hour
           />
           {Platform.OS === "ios" && (
-            <Pressable accessibilityRole="button" style={styles.done} onPress={() => setVisibleMode(null)}>
+            <Pressable accessibilityRole="button" style={styles.done} onPress={() => {
+              if (draft) commit(draft);
+              setVisibleMode(null);
+            }}>
               <Text style={styles.doneText}>Done</Text>
             </Pressable>
           )}
@@ -77,6 +95,8 @@ export function ReviewedEndTimePicker({
             <Text style={styles.error}>Choose a time after clock-in and within 24 hours of the start.</Text>}
         </>
       ) : <Text style={styles.note}>No reviewed end time selected.</Text>}
+      {draft && (draft < start || draft > end) &&
+        <Text style={styles.error}>Choose a time after clock-in and within 24 hours of the start.</Text>}
       <Text style={styles.note}>Time zone from this phone: {Intl.DateTimeFormat().resolvedOptions().timeZone || "device local"}.</Text>
     </View>
   );

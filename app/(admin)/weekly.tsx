@@ -43,10 +43,17 @@ export default function AdminWeeklyHoursScreen() {
   const [drivers, setDrivers] = useState<DriverWithWeeklyStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const data = await getCompanyDriversWithWeeklyStats(SINGLE_COMPANY_ID);
-    setDrivers(data);
+    setLoadError(null);
+    try {
+      const data = await getCompanyDriversWithWeeklyStats(SINGLE_COMPANY_ID);
+      setDrivers(data);
+    } catch (error) {
+      setDrivers([]);
+      setLoadError(error instanceof Error ? error.message : "Could not load the weekly payroll summary.");
+    }
   }, []);
 
   useEffect(() => {
@@ -87,14 +94,16 @@ export default function AdminWeeklyHoursScreen() {
       <Text style={styles.weekLabel}>{weekLabel}</Text>
       <Text style={styles.subtitle}>Explicitly approved payable time only. Unreviewed, rejected and test shifts are excluded.</Text>
 
-      {drivers.length === 0 ? (
-        <Text style={styles.empty}>No drivers with shifts this week.</Text>
+      {loadError ? (
+        <Text style={styles.error}>{loadError}</Text>
+      ) : drivers.length === 0 ? (
+        <Text style={styles.empty}>No driver accounts yet.</Text>
       ) : (
         <View style={styles.table}>
           <View style={styles.headerRow}>
             <Text style={[styles.cell, styles.cellName]}>Driver</Text>
             <Text style={[styles.cell, styles.cellHours]}>Approved</Text>
-            <Text style={[styles.cell, styles.cellShifts]}>Shifts</Text>
+            <Text style={[styles.cell, styles.cellShifts]}>Approved shifts</Text>
             <Text style={[styles.cell, styles.cellFlagged]}>Flagged</Text>
           </View>
           {drivers.map((d) => (
@@ -145,6 +154,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: spacing.xl,
   },
+  error: {
+    fontSize: 15,
+    color: "#b91c1c",
+    lineHeight: 22,
+  },
   empty: {
     fontSize: 15,
     color: colors.textSubtle,
@@ -184,7 +198,7 @@ const styles = StyleSheet.create({
     color: "#059669",
   },
   cellShifts: {
-    flex: 0.6,
+    flex: 1.2,
     color: "#475569",
   },
   cellFlagged: {

@@ -74,7 +74,9 @@ export async function getCompanyDriversWithWeeklyStats(
     .eq("company_id", companyId)
     .eq("role", "driver");
 
-  if (profilesError || !profilesData) return [];
+  if (profilesError || !profilesData) {
+    throw new Error("Could not load drivers for the weekly payroll summary.");
+  }
 
   const profiles = profilesData as Pick<ProfilesRow, "id" | "full_name" | "email" | "role">[];
   const { data: shiftsData, error: shiftsError } = await supabase
@@ -85,7 +87,9 @@ export async function getCompanyDriversWithWeeklyStats(
     .gte("clock_in_at", `${weekStart}T00:00:00`)
     .lt("clock_in_at", weekEnd);
 
-  if (shiftsError) return [];
+  if (shiftsError) {
+    throw new Error("Could not load shifts for the weekly payroll summary.");
+  }
 
   const shifts = (shiftsData ?? []) as Pick<ShiftsRow, "id" | "driver_id" | "verified_hours_minutes" | "flagged_at">[];
   // Only explicit payroll decisions count. Legacy "verified" fields are NOT approval.
@@ -107,7 +111,10 @@ export async function getCompanyDriversWithWeeklyStats(
   for (const s of shifts) {
     const cur = statsByDriver[s.driver_id];
     if (!cur || excluded.has(s.id)) continue;
-    cur.minutes += approved.get(s.id) ?? 0;
+    const payable = approved.get(s.id);
+    // Unreviewed shifts stay out of approved hours and the approved shift count.
+    if (payable == null) continue;
+    cur.minutes += payable;
     cur.shiftCount += 1;
     if (s.flagged_at != null) cur.flaggedCount += 1;
   }
@@ -275,9 +282,12 @@ export async function getDriverDetail(
   let weeklyShiftCount = 0;
   let weeklyFlaggedCount = 0;
   for (const s of weeklyShifts) {
-    if (excludedByShift.has((s as { id: string }).id)) continue;
+    const shiftId = (s as { id: string }).id;
+    if (excludedByShift.has(shiftId)) continue;
+    const payable = approvedByShift.get(shiftId);
+    if (payable == null) continue;
     weeklyShiftCount += 1;
-    weeklyMinutes += approvedByShift.get((s as { id: string }).id) ?? 0;
+    weeklyMinutes += payable;
     if ((s as { flagged_at?: string | null }).flagged_at) weeklyFlaggedCount += 1;
   }
 

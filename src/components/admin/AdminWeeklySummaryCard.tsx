@@ -45,7 +45,7 @@ export function AdminWeeklySummaryCard({
         <Text style={styles.verified}>
           Explicitly approved: {formatMinutes(totalMinutes)}
         </Text>
-        <Text style={styles.count}>{shiftCount} shifts</Text>
+        <Text style={styles.count}>{shiftCount} approved shifts</Text>
         {flaggedCount > 0 && (
           <View style={styles.flagBadge}>
             <Text style={styles.flagText}>{flaggedCount} flagged</Text>

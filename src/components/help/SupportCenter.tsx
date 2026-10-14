@@ -120,6 +120,7 @@ export function SupportCenter({forAdmin=false}: {forAdmin?:boolean}) {
             <Text style={styles.hint}>Case opened: {new Date(selected.created_at).toLocaleString()}</Text>
           </View>
           <Text style={styles.section}>Conversation</Text>
+          {!messages.length ? <Text style={styles.hint}>No messages in this conversation.</Text> : null}
           {messages.map(m=><View key={m.id} style={styles.card}>
             <Text style={styles.sender}>{m.author_id===profile?.id?"You":forAdmin?"Driver/team member":"First Choice support"}</Text>
             <Text style={styles.body}>{m.body}</Text>
@@ -150,6 +151,7 @@ export function SupportCenter({forAdmin=false}: {forAdmin?:boolean}) {
               <Text style={styles.buttonText}>Save audited decision</Text>
             </Pressable>
             <Text style={styles.section}>Administrator audit history</Text>
+            {!events.length ? <Text style={styles.hint}>No status changes recorded yet.</Text> : null}
             {events.map(e=><View key={e.id} style={styles.card}>
               <Text style={styles.body}>{e.from_status||"Created"} → {e.to_status}</Text>
               <Text style={styles.hint}>{e.note||"No note"} · {new Date(e.created_at).toLocaleString()}</Text>

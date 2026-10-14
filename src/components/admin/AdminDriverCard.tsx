@@ -24,7 +24,7 @@ export function AdminDriverCard({ driver, onPress }: AdminDriverCardProps) {
       </Text>
       <View style={styles.stats}>
         <Text style={styles.stat}>Weekly: {formatMinutes(driver.weeklyMinutes)}</Text>
-        <Text style={styles.stat}>Shifts: {driver.shiftCount}</Text>
+        <Text style={styles.stat}>Approved shifts: {driver.shiftCount}</Text>
         {driver.flaggedCount > 0 && (
           <View style={styles.flagBadge}>
             <Text style={styles.flagText}>{driver.flaggedCount} flagged</Text>

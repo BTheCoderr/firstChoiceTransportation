@@ -49,7 +49,7 @@ export async function getTicketMessages(id:string):Promise<TicketMessage[]> {
 export async function getTicketEvents(id:string):Promise<TicketEvent[]> {
  const {data,error}=await supabase.from("support_ticket_events").select("*")
   .eq("ticket_id",id).order("created_at",{ascending:false}).limit(100);
- if(error) return [];
+ if(error) throw new Error("Unable to load the case history.");
  return (data??[]) as TicketEvent[];
 }
 export async function createTicket(input: {subject:string;category:TicketCategory;message:string}):
