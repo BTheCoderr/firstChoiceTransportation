@@ -192,27 +192,6 @@ export default function AdminShiftDetailScreen() {
         <Text style={styles.driverEmail}>{driverEmail}</Text>
       </ScreenSection>
 
-      {(shift.clock_out_at === null || reviewEvents.length > 0) && (
-        <ScreenSection title="Shift recovery and audit">
-          <AdminShiftRecoveryPanel
-            shift={shift}
-            routePoints={routePoints}
-            reviewEvents={reviewEvents}
-            onChanged={async () => { await load(); }}
-          />
-        </ScreenSection>
-      )}
-
-      {shift.clock_out_at && (
-        <ScreenSection title="Administrator payroll review">
-          <AdminShiftDecisionPanel
-            shift={shift}
-            review={payrollReview}
-            events={payrollEvents}
-            onChanged={async () => { await load(); }}
-          />
-        </ScreenSection>
-      )}
       <ScreenSection title="Times">
         <View style={styles.card}>
           <Text style={styles.row}>
@@ -389,6 +368,28 @@ export default function AdminShiftDetailScreen() {
                 </Text>
               )}
           </View>
+        </ScreenSection>
+      )}
+      <Text style={styles.warnMuted}>Before making a payroll decision, review the clock-in/out evidence, route accuracy, flags, and any employee or dispatch records above. Do not approve test or unexplained hours.</Text>
+      {(shift.clock_out_at === null || reviewEvents.length > 0) && (
+        <ScreenSection title="Shift recovery and audit">
+          <AdminShiftRecoveryPanel
+            shift={shift}
+            routePoints={routePoints}
+            reviewEvents={reviewEvents}
+            onChanged={async () => { await load(); }}
+          />
+        </ScreenSection>
+      )}
+
+      {shift.clock_out_at && (
+        <ScreenSection title="Administrator payroll review">
+          <AdminShiftDecisionPanel
+            shift={shift}
+            review={payrollReview}
+            events={payrollEvents}
+            onChanged={async () => { await load(); }}
+          />
         </ScreenSection>
       )}
     </ScreenContainer>
