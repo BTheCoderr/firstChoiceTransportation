@@ -37,6 +37,8 @@ assert.match(migration, /admin_decide_shift_payroll/);
 assert.match(migration, /ON CONFLICT \(shift_id\)/);
 assert.match(migration, /SHIFT_STILL_OPEN/);
 assert.match(migration, /USE_RECOVERY_APPROVAL/);
+assert.match(migration, /trg_record_recovered_payroll_decision/);
+assert.match(migration, /record_recovered_payroll_decision/);
 assert.match(migration, /INSERT INTO public.shift_payroll_review_events/);
 assert.doesNotMatch(migration, /UPDATE public\.shifts/);
 assert.doesNotMatch(migration, /DELETE FROM public\.shifts/);
