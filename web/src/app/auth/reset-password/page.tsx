@@ -16,10 +16,13 @@ function getRecoveryRedirect(search: string, hash: string): string | null {
   if (query.has("error") || fragment.has("error") ||
       query.has("error_code") || fragment.has("error_code")) return null;
   const type = fragment.get("type") ?? query.get("type");
-  if (type !== "recovery") return null;
   const hasSession = Boolean(fragment.get("access_token") && fragment.get("refresh_token"));
   const hasVerification = Boolean(query.get("token_hash"));
-  if (!hasSession && !hasVerification) return null;
+  // Supabase PKCE sends a one-use ?code= without a type field; this is a
+  // dedicated recovery callback, and the app exchanges the code securely.
+  const hasPkceCode = Boolean(query.get("code"));
+  if (!((type === "recovery" && (hasSession || hasVerification)) ||
+        (hasPkceCode && (type === null || type === "recovery")))) return null;
   return `${APP_DEEP_LINK}${search}${hash}`;
 }
 
