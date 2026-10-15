@@ -31,11 +31,11 @@ This app contains employee location and payroll-related records. Do not reopen p
 - **Must run with a consenting test email/account:** administrator creates driver, employee receives reset link (including spam check), opens it on an actual iPhone, chooses password, signs in, enters name and phone, and sees onboarding completed. The Supabase Auth redirect URL allowlist must contain `https://firstchoicetransportation.netlify.app/auth/reset-password`. Do not create fake real-world employees for testing.
 - New driver creation remains controlled by the administrator; email and device testing does not activate GPS auto-clock-out or migration 020.
 
-## October 14 administrator shift-review pilot (branch-only, NOT DEPLOYED)
+## October 14 administrator shift-review rollout (database deployed; latest iPhone update pending)
 
-- iPhone screenshots exposed legacy flagged shift spans of 895h 15m and 1162h 28m, plus a GPS point reverse-geocoded as Beijing. These are **uninvestigated historical records**. Nothing has been deleted, corrected, paid or assumed to be test data.
+- iPhone screenshots exposed legacy flagged shift spans of 895h 15m and 1162h 28m, plus a GPS point reverse-geocoded as Beijing. These historical records were later cleared from operational tables on explicit request, with a restricted recovery archive retained. This does not prove the underlying GPS-source issue was fixed.
 - Migration **027_admin_payroll_decisions.sql** adds admin-only company-scoped decisions for closed records: documented payable-minute approval, reject, mark test/excluded, and return to review. Every change creates an append-only review event, and no historical shift values are rewritten.
-- **October 14 deployment verified:** Migrations 027 and 028 are installed on the existing First Choice Supabase project `xxrxzpktxeaplsnatcvn`. A restricted 72-row pre-upgrade snapshot of companies, profiles, driver_bases, shifts, and route_points was created under `firstchoice_archive`. The checks confirmed 6 users, 7 driver bases, 1 open shift, 57 GPS readings, and automatic clock-out disabled. Payroll decisions and support tickets are empty until first use. RLS, table privileges, and RPC permissions were inspected; full two-account mobile integration tests remain outstanding. There is no database connector access to the First Choice project's production organization in this session.
+- **October 14 deployment verified:** Migrations 027 and 028 are installed on the existing First Choice Supabase project `xxrxzpktxeaplsnatcvn`. A restricted 72-row pre-upgrade snapshot of companies, profiles, driver_bases, shifts, and route_points was created under `firstchoice_archive`. The checks confirmed 6 users, 7 driver bases, 1 open shift, 57 GPS readings, and automatic clock-out disabled. Payroll decisions and support tickets are empty until first use. RLS, table privileges, and RPC permissions were inspected; full two-account mobile integration tests remain outstanding. The verified live project was accessed directly for schema, privilege and preservation checks. These checks are not a substitute for actual admin-and-driver device testing.
 - The new Shift Review Center is a 200-most-recent CLOSED-shift review tool; it is not a complete historical export. Legacy recorded values are evidence, not payable-hour authorizations. Only explicit ledger approvals count in the updated admin weekly totals. When the ledger is unavailable, the display fails closed to zero rather than reusing suspicious recorded hours. Do not interpret this zero as a definitive payroll balance until migration 027 is installed.
 - The existing open-shift recovery workflow is separate: close with a supported, documented end time (within 24h of clock-in), then independently approve recovered minutes. The new decision RPC blocks approval of an unresolved recovered shift. Migration 027 also mirrors completed recovered-shift payroll approvals into the new ledger in the same transaction, including an immutable review event.
 - Unusual GPS readings now display original coordinates, accuracy and advisory warning text. Outlier detection is NOT evidence of wrongdoing, is never used to auto-close a shift, and never changes payroll.
@@ -63,7 +63,7 @@ This app contains employee location and payroll-related records. Do not reopen p
 
 ## iOS releases
 
-Production now uses `cli.appVersionSource: remote` and `production.autoIncrement: true` in `eas.json`. The previous local buildNumber 24 predates the TestFlight 1.0.1 build 25 already processed in May 2026. Before the FIRST build using remote versioning, inspect the current highest build number in App Store Connect/EAS, then run:
+Production now uses `cli.appVersionSource: remote` and `production.autoIncrement: true` in `eas.json`. Apple confirmed TestFlight 1.0.1 build 26 was approved on 2026-10-14, before final GitHub changes landed. Before the FIRST build using remote versioning, inspect the current highest build number in App Store Connect/EAS, then run:
 
 ```bash
 npm ci
@@ -71,7 +71,7 @@ npx eas build:version:set --platform ios
 npm run build:ios
 ```
 
-Set the EAS remote iOS build number to the current **highest accepted build**, not 24 or 1. Each subsequent production build should automatically increment it. `app.config.ts` keeps the public `version` string (currently 1.0.1); increment that separately for a new marketing release when necessary.
+Set the EAS remote iOS build number to the current **highest accepted build** (at least 26 as of October 14). Each subsequent production build should automatically increment it. `npm run build:ios` no longer submits automatically: review the finished build and test it before using `npm run submit:ios`. Build 26 predates merged commits `9f07a6a` and `8a909b8`; the next production build must include the current `main` and use a higher number. For internal iPhone preview, run `npm run build:ios:preview`. `app.config.ts` keeps the public `version` string (currently 1.0.1); increment that separately for a new marketing release when necessary.
 
 ## Run release QA
 
