@@ -24,6 +24,9 @@ BEGIN
   IF FOUND THEN
     IF v_profile.role = 'driver'::public.user_role
       AND v_profile.company_id = p_company_id THEN
+      IF v_profile.onboarding_completed_at IS NULL THEN
+        RETURN 'pending_activation';
+      END IF;
       RETURN 'already_active';
     END IF;
     RETURN 'conflicting_profile';
