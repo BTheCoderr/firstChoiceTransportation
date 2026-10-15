@@ -91,4 +91,26 @@ assert.doesNotMatch(dep.scripts["build:ios"], /--auto-submit/);
 assert.match(dep.scripts["build:ios:preview"], /--profile preview/);
 assert.match(dep.scripts["submit:ios"], /eas submit --platform ios/);
 assert.equal(lock.packages["node_modules/@react-native-community/datetimepicker"].version, "8.4.4");
+// Additional release audit guardrails: account deletion entry and reset-link safety.
+const profileScreen = read("app/(driver)/profile.tsx");
+assert.match(profileScreen, /Request account deletion/);
+const deletion = read("app/(driver)/delete-account.tsx");
+assert.match(deletion, /createTicket/);
+assert.match(deletion, /Account deletion request/);
+assert.doesNotMatch(deletion, /auth\.admin\.deleteUser/);
+const bridge = read("web/src/app/auth/reset-password/page.tsx");
+assert.match(bridge, /getRecoveryRedirect/);
+assert.match(bridge, /if \(!target\)/);
+assert.match(bridge, /"recovery"/);
+assert.doesNotMatch(bridge, /window\.location\.replace\(\x60\$\{APP_DEEP_LINK\}/);
+const mainApp = read("app.config.ts");
+assert.match(mainApp, /userInterfaceStyle: "light"/);
+assert.match(mainApp, /During an active shift/);
+const baseFiles = ["FIX_admin_role.sql", "FIX_auth_users_null_tokens.sql",
+  "FIX_ensure_profile_manual.sql", "FIX_profiles_direct.sql",
+  "FIX_profiles_manual_insert.sql", "FIX_sync_profiles.sql"];
+for (const name of baseFiles) {
+  assert.throws(() => read("supabase/" + name), /ENOENT/, "retired legacy SQL: " + name);
+}
+
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
