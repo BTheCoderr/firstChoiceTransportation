@@ -47,7 +47,7 @@ This app contains employee location and payroll-related records. Do not reopen p
 - Both approved Home and Office locations may end a shift after credible GPS evidence of leaving and returning, with a sustained dwell. No employee End Shift button.
 - Automatic GPS payroll closing is intentionally disabled in live Supabase `geofence_clockout_settings` until an actual iPhone field test passes.
 - Migrations 019, 021, 022, 023 and 024 are already installed on the existing Supabase project. Migration 024 is additive and does not alter prior shift/payroll rows.
-- Migration 020 must be applied only in a coordinated mobile rollout; it removes direct client payroll writes and disables the legacy manual completion RPC. Never apply it before upgrading active drivers.
+- Migrations 030 and 031 are now deployed to the existing live project (October 15, 2026) as an immediate compatibility-safe payroll integrity guard. An enabled trigger rejects direct fabricated completed shifts or edits to payroll, dates, driver and company fields; authenticated direct UPDATE permissions for those fields and DELETE privileges were revoked. Legacy OPEN shift starts and movement/flag status writes remain possible. Migration 020 remains the separate coordinated RPC-only cutover and will revoke the legacy manual completion RPC. Do not apply 020 before validating driver compatibility.
 - The admin dashboard has independent queues for open shifts and for shifts closed with payroll approval still pending. Verify these queues on real authenticated admin accounts.
 - Admin recovery is intentionally TWO separate steps: (1) select a supported end time, reason and detailed note to close the stuck shift with `verified_hours_minutes = NULL`; (2) separately approve the server-derived payable minutes with another note. Both actions have immutable company-scoped audit events.
 - Review evidence carefully before choosing an end time. The backend permits only end times between clock-in and the current time and within 24 hours of start. Existing historical open shifts must not be auto-closed or assigned invented hours.
@@ -57,7 +57,7 @@ This app contains employee location and payroll-related records. Do not reopen p
 ## Driver clock-in server authorization
 
 - Migration 026 is installed on existing Supabase: the server-clocked start-shift RPC rejects incomplete onboarding and missing admin-approved Home/Office, regardless of what the mobile UI displays.
-- A separate authenticated-only BEFORE INSERT trigger protects legacy direct shift writes pending the migration 020 coordinated cutover. The trigger does not rewrite historical shifts or auto-close active shifts.
+- The existing 026 onboarding/base BEFORE INSERT trigger remains. The additional 030 INSERT/UPDATE/DELETE guard and 031 column-level grants are verified live; no historical shifts, GPS route points, profiles or driver base records were changed during their installation. The legacy completion RPC still requires cutover review.
 - Tested with rolled-back synthetic driver data: incomplete onboarding denied, direct clock-in denied, complete onboarding without GPS base denied, valid onboarded driver with admin-approved base succeeds, duplicate open shift rejected.
 - Client messages guide drivers back to personal setup or to their administrator. Historical shifts were untouched.
 
