@@ -113,4 +113,33 @@ for (const name of baseFiles) {
   assert.throws(() => read("supabase/" + name), /ENOENT/, "retired legacy SQL: " + name);
 }
 
+// Immediate pre-020 production payroll hardening must deny direct changes to
+// payable minutes, employee identity, week assignment, and completed-shift inserts.
+const compatSql = read("supabase/migrations/030_legacy_shift_payroll_guard.sql");
+assert.match(compatSql, /CREATE TRIGGER guard_legacy_client_shift_mutations/);
+assert.match(compatSql, /BEFORE INSERT OR UPDATE OR DELETE ON public.shifts/);
+assert.match(compatSql, /NEW.clock_in_at := v_now/);
+assert.match(compatSql, /NEW.verified_hours_minutes IS NOT NULL/);
+assert.match(compatSql, /NEW.clock_out_at IS NOT NULL/);
+assert.match(compatSql, /current_user NOT IN \('authenticated','anon'\)/);
+assert.match(compatSql, /to_jsonb\(NEW\) - v_mutable/);
+assert.match(compatSql, /REVOKE DELETE, TRUNCATE, TRIGGER, REFERENCES/);
+assert.doesNotMatch(compatSql, /DELETE FROM public.shifts/);
+assert.doesNotMatch(compatSql, /UPDATE public.shifts SET/);
+const compatGrantSql = read("supabase/migrations/031_legacy_shift_column_privileges.sql");
+assert.match(compatGrantSql, /REVOKE UPDATE ON TABLE public.shifts FROM PUBLIC, anon, authenticated/);
+assert.match(compatGrantSql, /GRANT UPDATE \(/);
+assert.match(compatGrantSql, /has_column_privilege\('authenticated','public.shifts','verified_hours_minutes','UPDATE'\)/);
+assert.doesNotMatch(compatGrantSql, /UPDATE public\.shifts SET/);
+// Legacy final-dropoff must not mint client-chosen commute pay or auto-approve a shift.
+const compatEndSql = read("supabase/migrations/032_safe_legacy_shift_completion.sql");
+assert.match(compatEndSql, /CREATE OR REPLACE FUNCTION public.complete_driver_shift/);
+assert.match(compatEndSql, /clock_out_at = v_now/);
+assert.match(compatEndSql, /verified_hours_minutes = NULL/);
+assert.match(compatEndSql, /estimated_return_minutes = NULL/);
+assert.match(compatEndSql, /'driver_end_pending_payroll_review'/);
+assert.match(compatEndSql, /p.company_id = s.company_id/);
+assert.doesNotMatch(compatEndSql, /return_minutes :=|v_return_minutes :=/);
+assert.doesNotMatch(compatEndSql, /INSERT INTO public\.route_points/);
+assert.doesNotMatch(compatEndSql, /INSERT INTO public\.shift_payroll_reviews/);
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
