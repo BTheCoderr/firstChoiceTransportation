@@ -67,7 +67,9 @@ BEGIN
   IF v_moving THEN
     IF v_first IS NULL THEN
       v_first := greatest(v_shift.clock_in_at, v_latest.received_at);
-      IF v_elapsed >= 30 THEN v_flag := 'late_first_movement'; END IF;
+      IF v_first - v_shift.clock_in_at >= interval '30 minutes' THEN
+        v_flag := 'late_first_movement';
+      END IF;
     END IF;
     v_status := 'moving'::public.shift_status;
   ELSE
@@ -86,7 +88,7 @@ BEGIN
       SELECT min(r.received_at) INTO v_stationary_start
       FROM public.route_points r
       WHERE r.shift_id=p_shift_id
-        AND r.received_at BETWEEN v_latest.received_at - interval '45 minutes'
+        AND r.received_at BETWEEN v_latest.received_at - interval '90 minutes'
                               AND v_latest.received_at
         AND coalesce(r.accuracy,9999) <= 150
         AND coalesce(r.speed,0) < 0.9
