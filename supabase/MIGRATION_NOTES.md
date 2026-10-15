@@ -36,7 +36,7 @@ Do not revert 020 casually in production: reopening direct client writes would r
 - 026 adds onboarding/base gates before clock-in; it does *not* fully prevent fabricated shifts or modified hours by itself.
 - 027 adds audited explicit payroll decisions.
 - 028 adds support tickets and audit events.
-- 029 (separate unmerged work) proposes recovery for interrupted driver invitations.
+- 029 deployed October 15, 2026: service-role-only recovery for interrupted admin-created driver accounts, checking the original Auth account's server-side provisioning key and creator/company. Edge Function `create-driver` version 14 also deployed. No existing user is deleted; verified recovery is performed when an authenticated company admin retries the invitation. Confirm activation-email delivery on device.
 - 030 is deployed: client INSERT/UPDATE guard protects historical payroll fields, enforces server time on direct shift starts and blocks forged completed shifts.
 - 031 is deployed: direct authenticated UPDATE privileges are limited to movement/flag fields. Employee shift DELETE is revoked; records and GPS are preserved.
 - 032 is deployed: the legacy End Shift RPC uses trusted server time, marks the shift pending review, awards no automatic payroll or return commute minutes, and does not invent a GPS route point.

@@ -170,4 +170,24 @@ assert.equal(easternPayrollWeekStart(new Date("2026-10-15T16:00:00Z"), 0), "2026
 assert.equal(easternPayrollWeekStart(new Date("2026-03-09T01:00:00Z"), 0), "2026-03-02"); // still Sunday night in NY
 assert.equal(easternPayrollWeekStart(new Date("2026-03-09T05:00:00Z"), 0), "2026-03-09");
 
+// Interrupted invitation repair must be bound to a trusted provisioning key
+// and cannot delete/reassign existing Auth identities.
+const inviteRecoverySql = read("supabase/migrations/029_finish_driver_provisioning.sql");
+assert.match(inviteRecoverySql, /CREATE OR REPLACE FUNCTION public\.finalize_driver_provisioning/);
+assert.match(inviteRecoverySql, /v_user\.raw_app_meta_data->>'first_choice_provisioning_key'/);
+assert.match(inviteRecoverySql, /v_intent\.provisioning_key::text/);
+assert.match(inviteRecoverySql, /v_intent\.created_by/);
+assert.match(inviteRecoverySql, /company_id = p_company_id/);
+assert.match(inviteRecoverySql, /v_intent\.created_at|created_at > clock_timestamp\(\)/);
+assert.match(inviteRecoverySql, /REVOKE ALL ON FUNCTION public\.finalize_driver_provisioning\(text,uuid\)/);
+assert.match(inviteRecoverySql, /TO service_role/);
+assert.doesNotMatch(inviteRecoverySql, /DELETE FROM (public\.profiles|auth\.users)/);
+const createDriverFunction = read("supabase/functions/create-driver/index.ts");
+assert.match(createDriverFunction, /finalize_driver_provisioning/);
+assert.match(createDriverFunction, /existingState === "recovered"/);
+assert.match(createDriverFunction, /existingState === "pending_activation"/);
+assert.match(createDriverFunction, /existingState !== "not_found"/);
+assert.match(createDriverFunction, /getUser\(token\)/);
+assert.match(createDriverFunction, /admin\.role !== "admin"/);
+assert.match(read("app/(admin)/create-driver.tsx"), /result\.message/);
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
