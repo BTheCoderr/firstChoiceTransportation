@@ -1,0 +1,64 @@
+name: First Choice iOS Preview
+
+# Auto-attempt one preview build when this workflow is first installed on main.
+# Future builds may be started manually from GitHub Actions.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ios-preview.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firstchoice-ios-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: EAS iPhone preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      CI: "1"
+    steps:
+      - name: Checkout release commit
+        uses: actions/checkout@v4
+
+      - name: Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Verify Expo account authorization
+        shell: bash
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error title=EAS authorization missing::Add EXPO_TOKEN to GitHub repository Actions secrets, then re-run this workflow. No build has been requested."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up authenticated EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Show Expo project identity
+        run: eas project:info --non-interactive
+
+      - name: Queue iPhone preview (no Apple submission)
+        run: |
+          echo "Building git commit $GITHUB_SHA with ios/preview"
+          eas build --platform ios --profile preview --non-interactive --no-wait
+          echo "### First Choice iOS preview requested" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit: \`$GITHUB_SHA\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Profile: preview, internal distribution. No TestFlight/App Store submission." >> "$GITHUB_STEP_SUMMARY"
+          echo "See https://expo.dev/accounts/bferrell514/projects/firstchoicetransportation/builds for the build link and progress." >> "$GITHUB_STEP_SUMMARY"
