@@ -35,10 +35,11 @@ export default function CreateDriverScreen() {
         setError(result.error ?? "Could not create this driver.");
         return;
       }
-      const message = result.activationEmailSent === false
-        ? "The driver account was created, but the activation email was not sent. Check email delivery. The driver can use Forgot Password once mail is working."
-        : "Driver account created. An activation email was requested. Ask the driver to check their inbox and spam folder, choose their own password, and complete their information. Confirm delivery before assigning shifts.";
-      Alert.alert("Driver account created", message,
+      const message = result.message ??
+        (result.activationEmailSent === false
+          ? "The driver profile is ready, but the activation email was not sent. The driver can use Forgot Password once delivery is working."
+          : "An activation email was requested. Ask the driver to check their inbox, choose their own password, and finish onboarding.");
+      Alert.alert("Driver invitation", message,
         [{ text: "OK", onPress: () => router.back() }]);
       setEmail("");
     } catch {
