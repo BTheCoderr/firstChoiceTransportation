@@ -131,4 +131,15 @@ assert.match(compatGrantSql, /REVOKE UPDATE ON TABLE public.shifts FROM PUBLIC, 
 assert.match(compatGrantSql, /GRANT UPDATE \(/);
 assert.match(compatGrantSql, /has_column_privilege\('authenticated','public.shifts','verified_hours_minutes','UPDATE'\)/);
 assert.doesNotMatch(compatGrantSql, /UPDATE public\.shifts SET/);
+// Legacy final-dropoff must not mint client-chosen commute pay or auto-approve a shift.
+const compatEndSql = read("supabase/migrations/032_safe_legacy_shift_completion.sql");
+assert.match(compatEndSql, /CREATE OR REPLACE FUNCTION public.complete_driver_shift/);
+assert.match(compatEndSql, /clock_out_at = v_now/);
+assert.match(compatEndSql, /verified_hours_minutes = NULL/);
+assert.match(compatEndSql, /estimated_return_minutes = NULL/);
+assert.match(compatEndSql, /'driver_end_pending_payroll_review'/);
+assert.match(compatEndSql, /p.company_id = s.company_id/);
+assert.doesNotMatch(compatEndSql, /return_minutes :=|v_return_minutes :=/);
+assert.doesNotMatch(compatEndSql, /INSERT INTO public\.route_points/);
+assert.doesNotMatch(compatEndSql, /INSERT INTO public\.shift_payroll_reviews/);
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
