@@ -15,7 +15,7 @@ export default function SupportPage() {
         <p className="text-slate-700">First Choice Transportation is a workforce app used by authorized drivers and company administrators.</p>
         <section className="space-y-3">
           <h2 className="text-2xl font-semibold">Sign-in and accounts</h2>
-          <p>Driver accounts are set up by a company administrator. If you cannot sign in, ask your administrator to confirm your account or reset your password from the app’s sign-in screen.</p>
+          <p>Driver accounts are created by your company administrator. Ask your administrator for the TestFlight invite. If you cannot sign in, use Forgot Password in the app or ask the administrator to verify your activation. Never repeatedly invite an existing email.</p>
         </section>
         <section className="space-y-3">
           <h2 className="text-2xl font-semibold">Location and shifts</h2>
@@ -25,7 +25,7 @@ export default function SupportPage() {
           <h2 className="text-2xl font-semibold">Incorrect hours or routes</h2>
           <p>Do not create a duplicate shift to correct an error. Ask your administrator to review the affected shift and its GPS records.</p>
         </section>
-        <p className="text-sm text-slate-600">For privacy or data-access questions, see our <Link className="text-blue-700 underline" href="/privacy">privacy information</Link> and contact your organization administrator.</p>
+        <p className="text-sm text-slate-600">For help from a person, signed-in drivers can open the in-app Help & Support Center and create a ticket; administrators receive the case in their Support Cases screen. If you cannot sign in, contact the company administrator who invited you. A separate public support email is not yet confirmed. For privacy or data-access questions, see our <Link className="text-blue-700 underline" href="/privacy">privacy information</Link> and contact your organization administrator.</p>
       </div>
     </main>
   );
