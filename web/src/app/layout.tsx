@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "First Choice Transportation",
-  description: "Reliable transportation services for your needs.",
+  description: "Private operations portal for authorized First Choice Transportation drivers and administrators, including verified shifts, routes, and support.",
 };
 
 export default function RootLayout({
