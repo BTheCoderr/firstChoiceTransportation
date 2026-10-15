@@ -110,6 +110,18 @@ Deno.serve(async (request: Request) => {
         error: "This email already has an account or pending record that needs administrator review. No duplicate was created." }, 409);
     }
 
+    // An expired invitation with no Auth user must not block a legitimate
+    // administrator retry forever. Do not ever delete Auth users here.
+    const { error: cleanupError } = await server.rpc(
+      "clear_expired_unclaimed_driver_intent",
+      { p_email: email, p_company_id: admin.company_id }
+    );
+    if (cleanupError) {
+      console.error("create-driver: expired-intent cleanup failed", cleanupError.code);
+      return respond({ success: false,
+        error: "Driver invitation could not be verified. No new account was created." }, 503);
+    }
+
     // One-time intent is written with trusted company + admin identity.
     // Auth's trigger may not run after app_metadata is fully populated; the
     // explicit finalization step below handles that timing safely.
