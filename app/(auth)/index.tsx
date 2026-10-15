@@ -79,7 +79,7 @@ export default function LoginScreen() {
       setIsSubmitting(false);
       setError(signInError.message === "Invalid login credentials"
         ? "Invalid email or password."
-        : signInError.message);
+        : "Could not sign in. Check your connection, verify your account is activated, and try again.");
       return;
     }
 
@@ -156,7 +156,8 @@ export default function LoginScreen() {
         onChangeText={setEmail}
         autoCapitalize="none"
         autoCorrect={false}
-        autoComplete="off"
+        autoComplete="email"
+        textContentType="username"
         keyboardType="email-address"
         editable={!isSubmitting}
       />
@@ -168,7 +169,8 @@ export default function LoginScreen() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
-        autoComplete="off"
+        autoComplete="current-password"
+        textContentType="password"
         editable={!isSubmitting}
       />
 
