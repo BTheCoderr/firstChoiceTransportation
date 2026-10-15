@@ -1,13 +1,13 @@
 name: First Choice iOS Preview
 
-# Auto-attempt one preview build when this workflow is first installed on main.
-# Future builds may be started manually from GitHub Actions.
+# On-demand preview builds: create a branch named build/ios-preview-*
+# from the release commit. This avoids automatic EAS charges on every main push.
+# Manual workflow_dispatch remains available from GitHub Actions.
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths:
-      - .github/workflows/ios-preview.yml
+    branches:
+      - 'build/ios-preview-*'
 
 permissions:
   contents: read
