@@ -222,4 +222,7 @@ for (const path of ["src/services/movement.ts", "src/services/suspicious.ts"]) {
   assert.doesNotMatch(code, /\.from\("shifts"\)[\s\S]*?\.update\(/);
 }
 
+const profileMetadataPrivileges = read("supabase/migrations/036_revoke_anon_profile_metadata.sql");
+assert.match(profileMetadataPrivileges, /REVOKE ALL ON FUNCTION public\.get_my_profile_meta\(\) FROM PUBLIC, anon/);
+assert.match(profileMetadataPrivileges, /GRANT EXECUTE ON FUNCTION public\.get_my_profile_meta\(\) TO authenticated/);
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
