@@ -103,22 +103,34 @@ export default function AdminShiftDetailScreen() {
   const [data, setData] = useState<ShiftDetailResult | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!id) return null;
-    const result = await getShiftDetail(id);
-    setData(result);
-    return result;
+    try {
+      const result = await getShiftDetail(id);
+      setData(result);
+      setLoadError(null);
+      return result;
+    } catch {
+      // Do not expose stale payroll decisions when an audit/evidence query fails.
+      setData(null);
+      setLoadError("Unable to load shift evidence or the secure payroll audit. No decisions were changed. Check your connection and try again.");
+      return null;
+    }
   }, [id]);
 
   useEffect(() => {
-    load().finally(() => setIsLoading(false));
+    void load().finally(() => setIsLoading(false));
   }, [load]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   if (isLoading) {
@@ -139,7 +151,17 @@ export default function AdminShiftDetailScreen() {
         scroll={false}
         contentContainerStyle={styles.centered}
       >
-        <Text style={styles.emptyText}>Shift not found.</Text>
+        <Text style={styles.emptyText}>{loadError ?? "Shift not found."}</Text>
+        {loadError && (
+          <Pressable accessibilityRole="button" accessibilityLabel="Retry loading shift"
+            onPress={() => {
+              setIsLoading(true);
+              void load().finally(() => setIsLoading(false));
+            }}
+            style={{ padding: 14, marginTop: 14 }}>
+            <Text style={{ color: colors.primary, fontWeight: "600" }}>Retry loading shift</Text>
+          </Pressable>
+        )}
       </ScreenContainer>
     );
   }

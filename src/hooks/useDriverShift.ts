@@ -145,16 +145,9 @@ export function useDriverShift(driverId: string | undefined) {
       try {
         /** Recorded as `last_dropoff_at` — not the same as paid `clock_out_at` (see endShift service). */
         const dropoffAt = new Date().toISOString();
-        console.info(
-          `[FinalDropoff] ${JSON.stringify({
-            event: "end_shift_invoke",
-            shiftId,
-            driverId,
-            dropoffAt,
-            dropoffLat,
-            dropoffLng,
-          })}`
-        );
+        // Shift locations and employee IDs are private. Avoid writing them to
+        // production device logs; preserve only a non-sensitive dev marker.
+        if (__DEV__) console.info("[FinalDropoff] completion requested");
         const result = await withTimeout(
           completeShiftWithFinalDropoff(
             shiftId,

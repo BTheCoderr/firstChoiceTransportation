@@ -362,10 +362,16 @@ export async function getShiftDetail(
       .select("*")
       .eq("shift_id", shiftId)
       .order("created_at", { ascending: false }),
-    getPayrollReview(shiftId).catch(() => null),
-    getPayrollReviewEvents(shiftId).catch(() => []),
+    // Missing or inaccessible payroll audit data must block reviews rather than
+    // silently presenting the shift as unreviewed with an empty audit history.
+    getPayrollReview(shiftId),
+    getPayrollReviewEvents(shiftId),
   ]);
 
+  // Never treat a failed evidence query as an empty route or audit trail.
+  if (routeRes.error || stopsRes.error || auditRes.error) {
+    throw new Error("SHIFT_EVIDENCE_UNAVAILABLE");
+  }
   const routePoints = (routeRes.data ?? []) as RoutePointsRow[];
   const clientStops = (stopsRes.data ?? []) as ClientStopsRow[];
 
