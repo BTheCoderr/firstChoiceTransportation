@@ -110,6 +110,9 @@ BEGIN
     ELSIF v_row.decision='needs_review' OR v_row.manual_recovery THEN
       v_state := 'exception'; v_reason := 'manual_review_required';
       v_exceptions := v_exceptions+1;
+    ELSIF v_row.clock_out_at > v_until THEN
+      v_state := 'exception'; v_reason := 'crosses_pay_period_boundary';
+      v_exceptions := v_exceptions+1;
     ELSIF v_row.clock_out_at <= v_row.clock_in_at
       OR v_row.clock_out_at > v_row.clock_in_at+interval '24 hours' THEN
       v_state := 'exception'; v_reason := 'invalid_or_extended_duration';
