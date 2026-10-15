@@ -190,4 +190,19 @@ assert.match(createDriverFunction, /existingState !== "not_found"/);
 assert.match(createDriverFunction, /getUser\(token\)/);
 assert.match(createDriverFunction, /admin\.role !== "admin"/);
 assert.match(read("app/(admin)/create-driver.tsx"), /result\.message/);
+// Expired invitations can only be cleared if no real Auth user exists.
+const expireInvitesSql = read("supabase/migrations/034_expire_unclaimed_driver_invites.sql");
+assert.match(expireInvitesSql, /CREATE OR REPLACE FUNCTION public.clear_expired_unclaimed_driver_intent/);
+assert.match(expireInvitesSql, /i.consumed_at IS NULL/);
+assert.match(expireInvitesSql, /i.user_id IS NULL/);
+assert.match(expireInvitesSql, /i.created_at < clock_timestamp\(\) - interval '7 days'/);
+assert.match(expireInvitesSql, /NOT EXISTS \(SELECT 1 FROM auth.users/);
+assert.match(expireInvitesSql, /REVOKE ALL ON FUNCTION public.clear_expired_unclaimed_driver_intent/);
+assert.match(expireInvitesSql, /TO service_role/);
+assert.doesNotMatch(expireInvitesSql, /DELETE FROM auth.users/);
+const provisionFunction = read("supabase/functions/create-driver/index.ts");
+assert.match(provisionFunction, /clear_expired_unclaimed_driver_intent/);
+assert.ok(provisionFunction.indexOf("existingState !== \"not_found\"") <
+  provisionFunction.indexOf("clear_expired_unclaimed_driver_intent"));
+
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
