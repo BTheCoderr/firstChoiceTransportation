@@ -10,7 +10,7 @@ const APP_DEEP_LINK = "firstchoice://update-password";
  * visit, expired/error response or unrelated auth link must NEVER open the
  * app into a misleading empty recovery session.
  */
-export function getRecoveryRedirect(search: string, hash: string): string | null {
+function getRecoveryRedirect(search: string, hash: string): string | null {
   const query = new URLSearchParams(search);
   const fragment = new URLSearchParams(hash.replace(/^#/, ""));
   if (query.has("error") || fragment.has("error") ||
