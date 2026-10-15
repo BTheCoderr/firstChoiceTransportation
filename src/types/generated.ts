@@ -701,6 +701,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      refresh_driver_shift_activity: {
+        Args: { p_shift_id: string }
+        Returns: string
+      }
       admin_review_driver_week: {
         Args: {
           p_driver_id: string
