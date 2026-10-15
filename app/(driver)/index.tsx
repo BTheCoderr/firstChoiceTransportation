@@ -5,7 +5,9 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { useRouter, useFocusEffect } from "expo-router";
 import { SINGLE_COMPANY_ID } from "@/constants/company";
 import { useAuth } from "@/hooks/useAuth";
@@ -169,6 +171,27 @@ export default function DriverHomeScreen() {
           "An administrator must save an approved Home or Office before you can start a GPS-tracked shift."
         ));
         return;
+      }
+      // Explain collection before requesting native location permissions.
+      // This does NOT replace the iOS consent prompt or make permissions automatic.
+      const disclosure = await SecureStore.getItemAsync("firstchoice_location_disclosure_v1").catch(() => null);
+      if (!disclosure) {
+        const agreed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            "Location during a work shift",
+            "First Choice records route samples while a shift you start is active, including in the background. Your administrator uses them to verify routes, approved return locations and disputed hours. Tracking stops when the shift is closed. You can change permissions in Settings.",
+            [
+              { text: "Not now", style: "cancel", onPress: () => resolve(false) },
+              { text: "Continue", onPress: () => resolve(true) },
+            ],
+            { cancelable: false }
+          );
+        });
+        if (!agreed) {
+          safeSetState(() => setStartError("Location authorization was not requested. You can start a shift after reviewing the location disclosure."));
+          return;
+        }
+        await SecureStore.setItemAsync("firstchoice_location_disclosure_v1", "seen").catch(() => {});
       }
       const permissionGranted = await requestPermissions();
       if (!permissionGranted) {
