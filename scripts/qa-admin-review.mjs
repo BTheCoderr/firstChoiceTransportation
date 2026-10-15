@@ -113,4 +113,17 @@ for (const name of baseFiles) {
   assert.throws(() => read("supabase/" + name), /ENOENT/, "retired legacy SQL: " + name);
 }
 
+// Immediate pre-020 production payroll hardening must deny direct changes to
+// payable minutes, employee identity, week assignment, and completed-shift inserts.
+const compatSql = read("supabase/migrations/030_legacy_shift_payroll_guard.sql");
+assert.match(compatSql, /CREATE TRIGGER guard_legacy_client_shift_mutations/);
+assert.match(compatSql, /BEFORE INSERT OR UPDATE OR DELETE ON public.shifts/);
+assert.match(compatSql, /NEW.clock_in_at := v_now/);
+assert.match(compatSql, /NEW.verified_hours_minutes IS NOT NULL/);
+assert.match(compatSql, /NEW.clock_out_at IS NOT NULL/);
+assert.match(compatSql, /current_user NOT IN \('authenticated','anon'\)/);
+assert.match(compatSql, /to_jsonb\(NEW\) - v_mutable/);
+assert.match(compatSql, /REVOKE DELETE, TRUNCATE, TRIGGER, REFERENCES/);
+assert.doesNotMatch(compatSql, /DELETE FROM public.shifts/);
+assert.doesNotMatch(compatSql, /UPDATE public.shifts SET/);
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
