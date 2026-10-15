@@ -11,7 +11,7 @@
 
 ## Immediate production protection (030/031) and final cutover (020)
 
-`020_lock_client_shift_writes_after_rollout.sql` is **not yet applied to production** (last directly checked October 15, 2026). **Migrations 030 and 031 were applied and verified on October 15.** Authenticated clients can no longer directly UPDATE payroll/date/owner/company fields or DELETE shifts. The 030 trigger also blocks fabricated completed/paid inserts and assigns a server clock-in time. Authenticated INSERT of a guarded open shift and restricted movement/flag updates remain supported pending full 020 cutover. The legacy `complete_driver_shift` RPC remains callable until 020 and must not be treated as a source of automatically approved payroll.
+`020_lock_client_shift_writes_after_rollout.sql` is **not yet applied to production** (last directly checked October 15, 2026). **Migrations 030 and 031 were applied and verified on October 15.** Authenticated clients can no longer directly UPDATE payroll/date/owner/company fields or DELETE shifts. The 030 trigger also blocks fabricated completed/paid inserts and assigns a server clock-in time. Authenticated INSERT of a guarded open shift and restricted movement/flag updates remain supported pending full 020 cutover. The legacy `complete_driver_shift` RPC remains callable until 020, but migration 032 now closes at trusted server time and always leaves payable minutes NULL for administrator approval; it no longer credits assumed travel minutes.
 
 Do **not** apply 020 merely to silence an audit warning. It revokes all client shift INSERT/DELETE and most UPDATE fields, and disables the legacy final-dropoff RPC. For old builds, this can cause broken shift start/end or GPS tracking.
 
@@ -39,6 +39,7 @@ Do not revert 020 casually in production: reopening direct client writes would r
 - 029 (separate unmerged work) proposes recovery for interrupted driver invitations.
 - 030 is deployed: client INSERT/UPDATE guard protects historical payroll fields, enforces server time on direct shift starts and blocks forged completed shifts.
 - 031 is deployed: direct authenticated UPDATE privileges are limited to movement/flag fields. Employee shift DELETE is revoked; records and GPS are preserved.
+- 032 is deployed: the legacy End Shift RPC uses trusted server time, marks the shift pending review, awards no automatic payroll or return commute minutes, and does not invent a GPS route point.
 - 020 is the final RPC-only cutover; it is still pending updated-client validation and revocation of legacy completion. Do not replay it prematurely. Review and test it before deploying.
 
 Retired historical emergency scripts were removed from `supabase/`; consult `LEGACY_SQL_DO_NOT_RUN.md`. Never create or promote admin accounts by running old seed scripts. Administrators create driver identities through the secured Edge Function, and the driver chooses their own password.
