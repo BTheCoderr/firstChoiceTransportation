@@ -86,5 +86,9 @@ assert.match(nativePicker, /DateTimePicker/);
 const dep = JSON.parse(read("package.json"));
 const lock = JSON.parse(read("package-lock.json"));
 assert.equal(dep.dependencies["@react-native-community/datetimepicker"], "8.4.4");
+// Production App Store submission must be an explicit human-reviewed step.
+assert.doesNotMatch(dep.scripts["build:ios"], /--auto-submit/);
+assert.match(dep.scripts["build:ios:preview"], /--profile preview/);
+assert.match(dep.scripts["submit:ios"], /eas submit --platform ios/);
 assert.equal(lock.packages["node_modules/@react-native-community/datetimepicker"].version, "8.4.4");
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
