@@ -701,6 +701,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_review_driver_week: {
+        Args: {
+          p_driver_id: string
+          p_week_start: string
+          p_note?: string | null
+          p_approve?: boolean
+        }
+        Returns: Json
+      }
       _gps_distance_m: {
         Args: { lat_a: number; lat_b: number; lon_a: number; lon_b: number }
         Returns: number
