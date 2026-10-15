@@ -142,4 +142,32 @@ assert.match(compatEndSql, /p.company_id = s.company_id/);
 assert.doesNotMatch(compatEndSql, /return_minutes :=|v_return_minutes :=/);
 assert.doesNotMatch(compatEndSql, /INSERT INTO public\.route_points/);
 assert.doesNotMatch(compatEndSql, /INSERT INTO public\.shift_payroll_reviews/);
+// Weekly approval is a one-tap-per-driver/pay-period transaction, not daily approval.
+const weekly = read("supabase/migrations/033_weekly_driver_payroll_approval.sql");
+assert.match(weekly, /CREATE OR REPLACE FUNCTION public.admin_review_driver_week/);
+assert.match(weekly, /America\/New_York/g);
+assert.match(weekly, /WEEK_STILL_IN_PROGRESS/);
+assert.match(weekly, /WEEK_HAS_UNRESOLVED_SHIFTS/);
+assert.match(weekly, /crosses_pay_period_boundary/);
+assert.match(weekly, /legacy_recorded_pay_requires_review/);
+assert.match(weekly, /v_row\.manual_recovery/);
+assert.match(weekly, /FOR UPDATE/);
+assert.match(weekly, /INSERT INTO public.shift_payroll_reviews/);
+assert.match(weekly, /INSERT INTO public.shift_payroll_review_events/);
+assert.doesNotMatch(weekly, /UPDATE public\.shifts SET/);
+assert.doesNotMatch(weekly, /DELETE FROM public\.shifts/);
+assert.match(weekly, /v_now < v_until/);
+assert.match(weekly, /GRANT EXECUTE ON FUNCTION public.admin_review_driver_week\(uuid,date,text,boolean\)/);
+const weeklyScreen = read("app/(admin)/weekly.tsx");
+assert.match(weeklyScreen, /Weekly payroll approval/);
+assert.match(weeklyScreen, /Approve completed payroll week/);
+assert.match(weeklyScreen, /reviewDriverPayrollWeek/);
+assert.match(weeklyScreen, /preview\.exceptionCount/);
+assert.match(weeklyScreen, /preview\.canApprove/);
+const { easternPayrollWeekStart } = loadTypeScript("src/utils/payrollWeek.ts");
+assert.equal(easternPayrollWeekStart(new Date("2026-10-15T16:00:00Z")), "2026-10-05");
+assert.equal(easternPayrollWeekStart(new Date("2026-10-15T16:00:00Z"), 0), "2026-10-12");
+assert.equal(easternPayrollWeekStart(new Date("2026-03-09T01:00:00Z"), 0), "2026-03-02"); // still Sunday night in NY
+assert.equal(easternPayrollWeekStart(new Date("2026-03-09T05:00:00Z"), 0), "2026-03-09");
+
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
