@@ -8,7 +8,7 @@ import {
 
 type Action = { decision: PayrollDecision; title: string; description: string };
 const ACTIONS: Action[] = [
-  { decision: "approved", title: "Approve or correct payable minutes", description: "Enter supported payable minutes. If already approved, this creates an audited correction." },
+  { decision: "approved", title: "Exception approval / correction", description: "For disputed, recovered, or corrected shifts only. Routine hours are approved together at the end of the week in Weekly Payroll Approval." },
   { decision: "rejected", title: "Reject for payroll", description: "Excludes this record from payable totals, without erasing evidence." },
   { decision: "test_excluded", title: "Delete from operational view (test archive)", description: "Soft deletion only: removes proven test data from payroll/reporting, but preserves original records for audit." },
   { decision: "needs_review", title: "Return to review", description: "Reopens the administrative decision, preserving previous actions." },
@@ -70,7 +70,8 @@ export function AdminShiftDecisionPanel({ shift, review, events, onChanged }: {
   };
   return (
     <View style={styles.panel}>
-      <Text style={styles.heading}>Payroll decision</Text>
+      <Text style={styles.heading}>Individual payroll exception</Text>
+      <Text style={styles.explain}>Normal shifts do not need approval each day. Use Weekly Payroll Approval after the Monday–Sunday period ends. Use this screen only for exceptions, rejected shifts, test records, or corrections.</Text>
       <Text style={styles.explain}>Original recorded time: {formatPayableMinutes(shift.verified_hours_minutes)}. This is historical evidence, not approval.</Text>
       <Text style={styles.explain}>Current status: {displayApprovalStatus(shift, review)}</Text>
       {span != null && span > 1440 &&
@@ -104,7 +105,7 @@ export function AdminShiftDecisionPanel({ shift, review, events, onChanged }: {
         {busy ? <ActivityIndicator color="#fff" /> :
           <Text style={styles.buttonText}>Confirm decision and save audit</Text>}
       </Pressable>
-      <Text style={styles.explain}>To correct previously approved hours, select Approve or correct payable minutes, enter the corrected amount and evidence, then confirm. The original approval remains in the audit history.</Text>
+      <Text style={styles.explain}>To correct previously approved hours, select Exception approval / correction, enter the corrected amount and evidence, then confirm. The original approval remains in the audit history.</Text>
       <Text style={styles.heading}>Review history</Text>
       {events.length === 0 && <Text style={styles.explain}>No payroll decision has been recorded yet.</Text>}
       {events.map((event) => (

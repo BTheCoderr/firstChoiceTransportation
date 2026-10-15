@@ -73,7 +73,7 @@ export default function AdminDashboardScreen() {
           accessibilityLabel="Weekly Hours"
           accessibilityRole="button"
         >
-          <Text style={styles.outlineButtonText}>Weekly Hours</Text>
+          <Text style={styles.outlineButtonText}>Weekly Payroll Approval</Text>
         </Pressable>
         <Pressable style={[styles.outlineButton, { marginTop: 12 }]} onPress={handleReviews}
           accessibilityRole="button" accessibilityLabel="Shift Review Center">
@@ -133,7 +133,7 @@ export default function AdminDashboardScreen() {
           {pendingPayrollShifts.length > 0 && (
             <>
               <SectionHeading size="large" style={styles.recentHeading}>
-                Payroll approval pending ({pendingPayrollShifts.length})
+                Recorded shifts awaiting weekly review ({pendingPayrollShifts.length})
               </SectionHeading>
               <Text style={styles.reviewHelp}>
                 These shifts were administratively closed but still have no approved
