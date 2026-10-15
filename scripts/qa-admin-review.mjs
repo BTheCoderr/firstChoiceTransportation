@@ -205,4 +205,21 @@ assert.match(provisionFunction, /clear_expired_unclaimed_driver_intent/);
 assert.ok(provisionFunction.indexOf("existingState !== \"not_found\"") <
   provisionFunction.indexOf("clear_expired_unclaimed_driver_intent"));
 
+// Movement/flag updates must be server-authoritative before the 020 cutover.
+const moveSql = read("supabase/migrations/035_server_owned_driver_movement.sql");
+assert.match(moveSql, /CREATE OR REPLACE FUNCTION public.refresh_driver_shift_activity/);
+assert.match(moveSql, /auth.uid\(\)/);
+assert.match(moveSql, /p.company_id = s.company_id/);
+assert.match(moveSql, /FOR UPDATE OF s/);
+assert.match(moveSql, /public._gps_distance_m/);
+assert.match(moveSql, /coalesce\(v_latest.accuracy, 9999\) <= 150/);
+assert.match(moveSql, /GRANT EXECUTE ON FUNCTION public.refresh_driver_shift_activity\(uuid\)/);
+assert.doesNotMatch(moveSql, /verified_hours_minutes\s*=/);
+assert.doesNotMatch(moveSql, /clock_out_at\s*=\s*v_now/);
+for (const path of ["src/services/movement.ts", "src/services/suspicious.ts"]) {
+  const code = read(path);
+  assert.match(code, /refresh_driver_shift_activity/);
+  assert.doesNotMatch(code, /\.from\("shifts"\)[\s\S]*?\.update\(/);
+}
+
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
