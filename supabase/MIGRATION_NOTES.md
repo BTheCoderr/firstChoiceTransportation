@@ -9,9 +9,9 @@
 3. Test with isolated role-scoped accounts and a disposable test environment. Never generate fictitious shifts or GPS samples in the live payroll database.
 4. Audit resulting role grants and test negative permissions. Confirm employee accounts and historical payroll/route evidence remain intact.
 
-## Critical coordinated cutover: migration 020
+## Immediate production protection (030/031) and final cutover (020)
 
-`020_lock_client_shift_writes_after_rollout.sql` is **not yet applied to production** (last directly checked October 15, 2026). Production still grants broad `INSERT`, `UPDATE`, and `DELETE` on `public.shifts` to `authenticated`, subject to RLS. This allows unsafe changes to owner shifts. Treat the live payroll report as not tamper-proof until the coordinated cutover completes.
+`020_lock_client_shift_writes_after_rollout.sql` is **not yet applied to production** (last directly checked October 15, 2026). **Migrations 030 and 031 were applied and verified on October 15.** Authenticated clients can no longer directly UPDATE payroll/date/owner/company fields or DELETE shifts. The 030 trigger also blocks fabricated completed/paid inserts and assigns a server clock-in time. Authenticated INSERT of a guarded open shift and restricted movement/flag updates remain supported pending full 020 cutover. The legacy `complete_driver_shift` RPC remains callable until 020 and must not be treated as a source of automatically approved payroll.
 
 Do **not** apply 020 merely to silence an audit warning. It revokes all client shift INSERT/DELETE and most UPDATE fields, and disables the legacy final-dropoff RPC. For old builds, this can cause broken shift start/end or GPS tracking.
 
@@ -36,7 +36,10 @@ Do not revert 020 casually in production: reopening direct client writes would r
 - 026 adds onboarding/base gates before clock-in; it does *not* fully prevent fabricated shifts or modified hours by itself.
 - 027 adds audited explicit payroll decisions.
 - 028 adds support tickets and audit events.
-- 029 (separate unmerged work) proposes recovery for interrupted driver invitations. Review and test it before deploying.
+- 029 (separate unmerged work) proposes recovery for interrupted driver invitations.
+- 030 is deployed: client INSERT/UPDATE guard protects historical payroll fields, enforces server time on direct shift starts and blocks forged completed shifts.
+- 031 is deployed: direct authenticated UPDATE privileges are limited to movement/flag fields. Employee shift DELETE is revoked; records and GPS are preserved.
+- 020 is the final RPC-only cutover; it is still pending updated-client validation and revocation of legacy completion. Do not replay it prematurely. Review and test it before deploying.
 
 Retired historical emergency scripts were removed from `supabase/`; consult `LEGACY_SQL_DO_NOT_RUN.md`. Never create or promote admin accounts by running old seed scripts. Administrators create driver identities through the secured Edge Function, and the driver chooses their own password.
 
