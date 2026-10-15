@@ -1,74 +1,43 @@
-# Supabase Migration Notes
+# First Choice Supabase migration and release notes
 
-## How to Run This Migration
+**Production project:** `xxrxzpktxeaplsnatcvn`. This project contains real driver, GPS and payroll data. Never run initial schema, historical seed data, a retired `FIX_*.sql`, or an old profile backfill against it.
 
-### Option A: Supabase Dashboard (SQL Editor)
+## Safe workflow
 
-1. Go to [supabase.com](https://supabase.com) → your project
-2. Open **SQL Editor**
-3. Run migrations in order:
-   - **001_initial_schema.sql** – full schema (companies, profiles, driver_bases, shifts, route_points, client_stops, weekly_summaries)
-   - **002_profiles_login_identifier.sql** – adds login_type, login_id for DL/username auth
-4. Copy each file’s contents and execute
+1. Confirm connected project ID, current migration list, RLS policies, and the actual installed mobile build. Prepare a restricted backup and recovery plan.
+2. Apply *only* reviewed, forward-only migrations not already present. Do not blindly replay a numbered file because a local filename is absent from migration history: previous migrations may have custom names.
+3. Test with isolated role-scoped accounts and a disposable test environment. Never generate fictitious shifts or GPS samples in the live payroll database.
+4. Audit resulting role grants and test negative permissions. Confirm employee accounts and historical payroll/route evidence remain intact.
 
-### Option B: Supabase CLI
+## Critical coordinated cutover: migration 020
 
-```bash
-supabase link --project-ref YOUR_PROJECT_REF
-supabase db push
-```
+`020_lock_client_shift_writes_after_rollout.sql` is **not yet applied to production** (last directly checked October 15, 2026). Production still grants broad `INSERT`, `UPDATE`, and `DELETE` on `public.shifts` to `authenticated`, subject to RLS. This allows unsafe changes to owner shifts. Treat the live payroll report as not tamper-proof until the coordinated cutover completes.
 
-Or run a single file:
+Do **not** apply 020 merely to silence an audit warning. It revokes all client shift INSERT/DELETE and most UPDATE fields, and disables the legacy final-dropoff RPC. For old builds, this can cause broken shift start/end or GPS tracking.
 
-```bash
-supabase db execute -f supabase/migrations/001_initial_schema.sql
-supabase db execute -f supabase/migrations/002_profiles_login_identifier.sql
-```
+Before cutover:
+- Establish a supported iOS build newer than TestFlight 1.0.1 (26), run a physical iPhone pilot, and confirm all active drivers are updated.
+- Validate `start_driver_shift` and the intended finish/exception workflow. Confirm that with GPS auto-clockout still disabled, employees can request safe administrator review of a stuck shift.
+- Exercise foreground/background location upload, movement statuses, flags, reconnects, account recovery, and separate administrator payroll approvals.
+- On a staging database apply 020, confirm drivers cannot INSERT closed shifts, UPDATE payroll dates/minutes, reopen shifts, clear flags or invoke the revoked completion function. Test that legitimate movement/route uploads still work. Migration 020 intentionally still grants certain status/flag fields; further server-authoritative movement hardening is necessary before those are trusted for payroll.
+- Take a fresh controlled backup, schedule rollout, communicate with the drivers, apply migration, verify negative RLS and resulting grants, and monitor telemetry and support requests.
 
----
+Do not revert 020 casually in production: reopening direct client writes would reintroduce the payroll integrity vulnerability.
 
-## Seed Data (After Migration)
+## Other migrations
 
-**Prerequisite:** Create 3 users in Supabase Auth first:
+- 010 makes approved driver bases administrator-controlled.
+- 016–018 protect profile roles, company membership and historical RPCs.
+- 019 adds server-timed shift start/complete functions; legacy completion must be revoked by 020 at cutover.
+- 021 restricts route point uploads to open shifts and reasonable timestamps.
+- 022 adds disabled-by-default automatic return-to-base closure; keep it disabled pending field testing.
+- 023–024 add trusted received-time and administrator shift recovery evidence.
+- 025 adds administrator-created, key-bound driver accounts and read-only `ensure_profile`. **Do not replay its historical onboarding backfill.**
+- 026 adds onboarding/base gates before clock-in; it does *not* fully prevent fabricated shifts or modified hours by itself.
+- 027 adds audited explicit payroll decisions.
+- 028 adds support tickets and audit events.
+- 029 (separate unmerged work) proposes recovery for interrupted driver invitations. Review and test it before deploying.
 
-1. **Auth** → **Users** → **Add user**
-2. Create:
-   - `admin@firstchoicetransport.com` (set password)
-   - `driver1@firstchoicetransport.com` (set password)
-   - `driver2@firstchoicetransport.com` (set password)
+Retired historical emergency scripts were removed from `supabase/`; consult `LEGACY_SQL_DO_NOT_RUN.md`. Never create or promote admin accounts by running old seed scripts. Administrators create driver identities through the secured Edge Function, and the driver chooses their own password.
 
-Then run **seed.sql** in the SQL Editor.
-
----
-
-## Schema Summary
-
-| Table | Purpose |
-|-------|---------|
-| `companies` | Company (First Choice Transportation) |
-| `profiles` | User profile, role, company (references auth.users) |
-| `driver_bases` | Base locations (home/office) per driver |
-| `shifts` | Clock in/out, GPS, verified hours, status, suspicious fields |
-| `route_points` | GPS points during shift |
-| `client_stops` | Pickups/dropoffs during shift |
-| `weekly_summaries` | Pre-computed weekly totals |
-
-**Shift statuses:** `started`, `moving`, `idle`, `completed`, `flagged`  
-**Suspicious:** `suspicious_reason`, `suspicious_details`, `flagged_at` on shifts (no separate alerts table)
-
----
-
-## Roles
-
-- **driver**: Manage own shifts, route_points, client_stops, driver_bases
-- **admin**: Read all data, manage weekly_summaries, driver_bases
-
----
-
-## Test Credentials (after seed)
-
-| Email | Role |
-|-------|------|
-| admin@firstchoicetransport.com | Admin |
-| driver1@firstchoicetransport.com | Driver |
-| driver2@firstchoicetransport.com | Driver |
+**Release gates:** GitHub CI is not a replacement for live RLS tests, native iPhone background-location testing, App Store privacy review, and a verified staff distribution strategy.

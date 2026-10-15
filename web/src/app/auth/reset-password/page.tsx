@@ -1,54 +1,64 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
-/**
- * Supabase `redirectTo` target (HTTPS so Mail/Safari opens a real page).
- * Forwards hash + query to the native app, which completes recovery in-app.
- * Must match `PASSWORD_RECOVERY_BRIDGE_URL` in the Expo app.
- */
 const APP_DEEP_LINK = "firstchoice://update-password";
 
-export default function AuthResetPasswordBridgePage() {
-  const [openAppHref, setOpenAppHref] = useState(APP_DEEP_LINK);
-  const [showHelp, setShowHelp] = useState(false);
+/**
+ * Only forward actual Supabase password-recovery credentials. A bare page
+ * visit, expired/error response or unrelated auth link must NEVER open the
+ * app into a misleading empty recovery session.
+ */
+function getRecoveryRedirect(search: string, hash: string): string | null {
+  const query = new URLSearchParams(search);
+  const fragment = new URLSearchParams(hash.replace(/^#/, ""));
+  if (query.has("error") || fragment.has("error") ||
+      query.has("error_code") || fragment.has("error_code")) return null;
+  const type = fragment.get("type") ?? query.get("type");
+  const hasSession = Boolean(fragment.get("access_token") && fragment.get("refresh_token"));
+  const hasVerification = Boolean(query.get("token_hash"));
+  // Supabase PKCE sends a one-use ?code= without a type field; this is a
+  // dedicated recovery callback, and the app exchanges the code securely.
+  const hasPkceCode = Boolean(query.get("code"));
+  if (!((type === "recovery" && (hasSession || hasVerification)) ||
+        (hasPkceCode && (type === null || type === "recovery")))) return null;
+  return `${APP_DEEP_LINK}${search}${hash}`;
+}
 
+export default function AuthResetPasswordBridgePage() {
+  const [openAppHref, setOpenAppHref] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
   useEffect(() => {
-    const target = `${APP_DEEP_LINK}${window.location.search}${window.location.hash}`;
+    const target = getRecoveryRedirect(window.location.search, window.location.hash);
+    if (!target) {
+      setShowHelp(true);
+      return;
+    }
     setOpenAppHref(target);
     window.location.replace(target);
     const id = window.setTimeout(() => setShowHelp(true), 2500);
     return () => window.clearTimeout(id);
   }, []);
-
   return (
-    <main
-      style={{
-        fontFamily:
-          'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-        padding: 24,
-        maxWidth: 480,
-        margin: "48px auto",
-        lineHeight: 1.5,
-      }}
-    >
-      <h1 style={{ fontSize: "1.35rem", marginBottom: 12 }}>
-        Opening First Choice Transportation…
+    <main style={{ fontFamily: "system-ui, sans-serif", maxWidth: 480, padding: 24,
+                   margin: "48px auto", lineHeight: 1.6 }}>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>
+        {openAppHref ? "Opening First Choice Transportation…" : "Password reset link unavailable"}
       </h1>
-      <p style={{ color: "#444" }}>
-        Finish resetting your password in the app. If nothing happens, use the
-        button below.
+      <p>
+        {openAppHref
+          ? "Finish choosing your new password in the app."
+          : "This link is missing recovery credentials, expired, or was opened incorrectly. Request a new password reset from the First Choice app sign-in screen."}
       </p>
-      {showHelp ? (
-        <p style={{ marginTop: 20 }}>
-          <a
-            href={openAppHref}
-            style={{ color: "#2563eb", fontWeight: 600 }}
-          >
-            Open in app
-          </a>
-        </p>
+      {showHelp && openAppHref ? (
+        <a href={openAppHref} style={{ color: "#1d4ed8", fontWeight: 600 }}>
+          Open First Choice app
+        </a>
       ) : null}
+      <p style={{ marginTop: 24 }}>
+        <Link href="/support" style={{ color: "#1d4ed8" }}>Need help?</Link>
+      </p>
     </main>
   );
 }

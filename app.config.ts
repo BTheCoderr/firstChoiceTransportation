@@ -17,7 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: "portrait",
   icon: "./assets/icon.png",
   scheme: "firstchoice",
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "light",
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
@@ -30,11 +30,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       ITSAppUsesNonExemptEncryption: false,
       UIBackgroundModes: ["location"],
       NSLocationWhenInUseUsageDescription:
-        "This app needs location access to track your shift and verify work hours.",
+        "When you start a work shift, First Choice uses your location to verify clock-in and record route evidence.",
       NSLocationAlwaysAndWhenInUseUsageDescription:
-        "This app needs background location to track your shift and verify work hours.",
+        "During an active shift, First Choice records location in the background to verify your route and return to an approved base.",
       NSLocationAlwaysUsageDescription:
-        "This app needs background location to track your shift and verify work hours.",
+        "During an active shift, First Choice records location in the background to verify your route and return to an approved base.",
     },
   },
   android: {
@@ -57,11 +57,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-location",
       {
         locationWhenInUsePermission:
-          "This app needs location access to track your shift and verify work hours.",
+          "When you start a work shift, First Choice uses your location to verify clock-in and record route evidence.",
         locationAlwaysAndWhenInUsePermission:
-          "This app needs background location to track your shift and verify work hours.",
+          "During an active shift, First Choice records location in the background to verify your route and return to an approved base.",
         locationAlwaysPermission:
-          "This app needs background location to track your shift and verify work hours.",
+          "During an active shift, First Choice records location in the background to verify your route and return to an approved base.",
         isIosBackgroundLocationEnabled: true,
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,

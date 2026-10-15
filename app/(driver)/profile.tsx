@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Pressable } from "react-native";
+import { useRouter } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { getDriverBaseSettings } from "@/services/driverBases";
 import {
@@ -13,6 +14,7 @@ import { useMountedRef } from "@/hooks/useMountedRef";
 
 export default function DriverProfileScreen() {
   const { profile } = useAuth();
+  const router = useRouter();
   const driverId = profile?.id;
   const [settings, setSettings] = useState<DriverBaseSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,6 +108,11 @@ export default function DriverProfileScreen() {
           </Text>
         </View>
       )}
+      <Pressable accessibilityRole="button" accessibilityLabel="Request account deletion"
+        style={{ minHeight: 48, justifyContent: "center", padding: 14, marginTop: 24 }}
+        onPress={() => router.push("/(driver)/delete-account")}>
+        <Text style={{ color: colors.primary, fontWeight: "600" }}>Request account deletion →</Text>
+      </Pressable>
     </ScreenContainer>
   );
 }
