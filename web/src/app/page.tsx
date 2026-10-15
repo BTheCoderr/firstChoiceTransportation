@@ -19,8 +19,9 @@ export default function Home() {
             First Choice Transportation
           </h1>
           <p className="text-lg text-slate-600">
-            Professional transportation services you can count on. Our driver
-            timesheet app keeps your team organized and your routes verified.
+            A private employee operations app for authorized First Choice drivers
+            and administrators. Record GPS-verified shifts, review payable hours,
+            and contact your company support team.
           </p>
         </section>
 
@@ -29,9 +30,10 @@ export default function Home() {
             About the App
           </h2>
           <p className="text-slate-600">
-            The First Choice Transportation app helps drivers clock in and out,
-            track shifts with GPS verification, and manage their schedules.
-            Admins can review shifts, flag anomalies, and ensure compliance.
+            Drivers use the app to start work shifts and record route evidence while
+            tracking is enabled. Administrators provision accounts, approve
+            shift corrections, and review payroll records. Automatic GPS
+            clock-out remains in a controlled pilot.
           </p>
         </section>
 
@@ -40,7 +42,8 @@ export default function Home() {
             Get in Touch
           </h2>
           <p className="mb-4 text-slate-600">
-            Need help? Visit our{" "}
+            Already an employee? Your administrator can provide an authorized TestFlight
+            invitation to install the app. Need account or shift help? Visit our{" "}
             <Link href="/support" className="text-blue-600 hover:underline">
               Support page
             </Link>{" "}
@@ -51,7 +54,9 @@ export default function Home() {
 
       <footer className="border-t border-slate-200 bg-white py-8">
         <div className="mx-auto max-w-4xl px-6 text-center text-sm text-slate-500">
-          © {new Date().getFullYear()} First Choice Transportation
+          © {new Date().getFullYear()} First Choice Transportation.{" "}
+          <Link href="/privacy" className="underline">Privacy</Link>{" · "}
+          <Link href="/support" className="underline">Support</Link>
         </div>
       </footer>
     </div>
