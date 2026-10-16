@@ -41,6 +41,7 @@ export default function AdminDashboardScreen() {
   const handleReviews = () => router.push("/(admin)/reviews");
   const handleHelp = () => router.push("/(admin)/help");
   const handleSupport = () => router.push("/(admin)/support");
+  const handleDiagnostics = () => router.push("/(admin)/diagnostics");
 
   return (
     <ScreenContainer
@@ -86,6 +87,10 @@ export default function AdminDashboardScreen() {
         <Pressable style={[styles.outlineButton, { marginTop: 12 }]} onPress={handleSupport}
           accessibilityRole="button" accessibilityLabel="Administrator support cases">
           <Text style={styles.outlineButtonText}>Support Cases</Text>
+        </Pressable>
+        <Pressable style={[styles.outlineButton, { marginTop: 12 }]} onPress={handleDiagnostics}
+          accessibilityRole="button" accessibilityLabel="Diagnostics and build information">
+          <Text style={styles.outlineButtonText}>Diagnostics & build info</Text>
         </Pressable>
       </AppSurface>
 
@@ -136,8 +141,7 @@ export default function AdminDashboardScreen() {
                 Recorded shifts awaiting weekly review ({pendingPayrollShifts.length})
               </SectionHeading>
               <Text style={styles.reviewHelp}>
-                These shifts were administratively closed but still have no approved
-                paid minutes. Open each audit and explicitly approve the documented hours.
+                These shifts have not received final payroll approval. Use Weekly Payroll Approval after the workweek ends; review exceptions separately.
               </Text>
               <View style={styles.cardList}>
                 {pendingPayrollShifts.map((item) => (
