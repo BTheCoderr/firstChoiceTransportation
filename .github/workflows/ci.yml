@@ -42,6 +42,9 @@ jobs:
       - name: Administrator review, GPS and recovery QA
         run: npm run qa:admin-review
 
+      - name: Authentication and recovery regression QA
+        run: npm run qa:auth
+
       - name: Expo Doctor (release compatibility)
         run: npx --yes expo-doctor
 
