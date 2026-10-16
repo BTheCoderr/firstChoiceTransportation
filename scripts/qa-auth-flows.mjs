@@ -52,7 +52,7 @@ const rootGate = read("app/index.tsx");
 assert.match(login, /try\s*\{[\s\S]*?signInWithPassword/);
 assert.match(login, /finally\s*\{\s*setIsSubmitting\(false\)/);
 assert.match(login, /Could not reach the sign-in service/);
-assert.match(login, /setPassword\("")/);
+assert.ok(login.includes('setPassword("")'));
 assert.match(logout, /scope: "local"|await signOut\(\)/);
 assert.match(logout, /catch\s*\{[\s\S]*?Sign out failed/);
 assert.match(authProvider, /signOut\(\{ scope: "local" \}\)/);
