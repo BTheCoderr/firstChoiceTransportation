@@ -9,18 +9,24 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { ScreenContainer } from "@/components/layout";
 import { colors, spacing } from "@/theme/spacing";
 
 export default function UpdatePasswordScreen() {
   const router = useRouter();
+  const { user, isLoading, recoveryInProgress } = useAuth();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
+    if (isLoading || !user || !recoveryInProgress) {
+      setError("This reset session is no longer active. Request a new link.");
+      return;
+    }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
@@ -32,6 +38,12 @@ export default function UpdatePasswordScreen() {
     setError(null);
     setIsSubmitting(true);
     try {
+      const { data: { session }, error: sessionError } =
+        await supabase.auth.getSession();
+      if (sessionError || !session?.user || session.user.id !== user.id) {
+        setError("The recovery session expired. Request a new password link.");
+        return;
+      }
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -46,6 +58,8 @@ export default function UpdatePasswordScreen() {
         setError("Password saved, but sign-out failed. Please sign out and sign in with your new password.");
         return;
       }
+      setPassword("");
+      setConfirm("");
       router.replace("/(auth)");
     } catch {
       setError("Could not complete the password reset. Check your connection and try again.");
@@ -53,6 +67,30 @@ export default function UpdatePasswordScreen() {
       setIsSubmitting(false);
     }
   };
+
+  if (!isLoading && (!user || !recoveryInProgress)) {
+    return (
+      <ScreenContainer safeAreaMode="fullBleed" scroll={false}
+        contentContainerStyle={styles.authContent}>
+        <Text style={styles.title}>Password reset link required</Text>
+        <Text style={styles.subtitle}>
+          Open a recent First Choice password-reset email on this device.
+          Expired or already-used links cannot change your password.
+        </Text>
+        <Pressable style={styles.button}
+          accessibilityRole="button"
+          accessibilityLabel="Request another password reset email"
+          onPress={() => router.replace("/(auth)/forgot-password")}>
+          <Text style={styles.buttonText}>Request a new link</Text>
+        </Pressable>
+        <Pressable style={styles.link}
+          accessibilityRole="button"
+          onPress={() => router.replace("/(auth)")}>
+          <Text style={styles.linkText}>Back to sign in</Text>
+        </Pressable>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer
@@ -164,6 +202,8 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.7,
   },
+  link: { paddingVertical: spacing.lg, marginTop: spacing.sm },
+  linkText: { color: colors.primary, fontWeight: "600", fontSize: 15 },
   buttonText: {
     color: "#fff",
     fontSize: 16,
