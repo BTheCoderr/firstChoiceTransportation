@@ -108,6 +108,11 @@ export default function DriverProfileScreen() {
           </Text>
         </View>
       )}
+      <Pressable accessibilityRole="button" accessibilityLabel="Diagnostics and build information"
+        style={{ minHeight: 48, justifyContent: "center", padding: 14, marginTop: 16 }}
+        onPress={() => router.push("/(driver)/diagnostics")}>
+        <Text style={{ color: colors.primary, fontWeight: "600" }}>Diagnostics & build info →</Text>
+      </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Request account deletion"
         style={{ minHeight: 48, justifyContent: "center", padding: 14, marginTop: 24 }}
         onPress={() => router.push("/(driver)/delete-account")}>
