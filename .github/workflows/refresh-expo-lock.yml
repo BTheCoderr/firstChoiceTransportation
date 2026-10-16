@@ -1,0 +1,35 @@
+name: Temporary Expo Lock Refresh
+on:
+  push:
+    branches:
+      - fix/firstchoice-expo-doctor-release-gate-20261016
+    paths:
+      - .github/workflows/refresh-expo-lock.yml
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Regenerate lockfile from published Expo SDK 54 patches
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Check patched package versions
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx --yes expo-doctor
+      - name: Commit lockfile to this feature branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: lock Expo SDK 54 compatible patch dependencies"
+            git push origin HEAD:fix/firstchoice-expo-doctor-release-gate-20261016
+          fi
