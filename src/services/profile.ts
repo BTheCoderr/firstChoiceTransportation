@@ -5,7 +5,7 @@ import type { UserRole } from "@/types/app";
 
 export type ProfileLoadResult =
   | { ok: true; profile: ProfilesRow }
-  | { ok: false; error: "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING" };
+  | { ok: false; error: "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING" | "NETWORK_ERROR" };
 
 const VALID_ROLES: UserRole[] = ["driver", "admin"];
 
@@ -30,7 +30,9 @@ export async function loadProfileForUser(
   }
 
   if (directError?.code !== "PGRST116") {
-    return { ok: false, error: "PROFILE_MISSING" };
+    // Database outage, expired bearer token, or network issue is not proof the
+    // employee is unprovisioned. Keep their account and offer retry.
+    return { ok: false, error: "NETWORK_ERROR" };
   }
 
   const { data: rpcData, error: rpcError } = await supabase.rpc("ensure_profile");
@@ -42,7 +44,7 @@ export async function loadProfileForUser(
     return { ok: false, error: "PROFILE_MISSING" };
   }
   if (rpcError) {
-    return { ok: false, error: "PROFILE_MISSING" };
+    return { ok: false, error: "NETWORK_ERROR" };
   }
 
   const result = rpcData as { success?: boolean; profile?: ProfilesRow } | null;
@@ -78,7 +80,7 @@ export function validateProfileForSingleCompany(
 }
 
 export function profileErrorMessage(
-  error: "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING"
+  error: "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING" | "NETWORK_ERROR"
 ): string {
   switch (error) {
     case "PROFILE_MISSING":
@@ -87,6 +89,8 @@ export function profileErrorMessage(
       return "Your account is not set up for this app. Please contact your administrator.";
     case "ROLE_MISSING":
       return "Your profile is missing a role. Please contact your administrator.";
+    case "NETWORK_ERROR":
+      return "Could not check your account right now. Check your connection and tap Retry.";
     default:
       return "Your account could not be loaded. Please contact your administrator.";
   }

@@ -46,7 +46,7 @@ export default function IndexScreen() {
       (profileLoading || awaitingSignedInProfile));
 
   useEffect(() => {
-    if (authBootBusy || (recoveryInProgress && user)) return;
+    if (authBootBusy) return;
 
     const id = setTimeout(() => {
       if (!user) {

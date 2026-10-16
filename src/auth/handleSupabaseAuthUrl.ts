@@ -1,5 +1,6 @@
 import * as Linking from "expo-linking";
 import { supabase } from "@/lib/supabase";
+import { isTrustedRecoveryCallback } from "@/auth/trustedRecoveryCallback";
 
 /**
  * Parse hash + query from a deep link. Handles custom schemes if `new URL` is unreliable.
@@ -44,6 +45,7 @@ function parseAuthUrlParts(url: string): {
  * Required because `detectSessionInUrl` is false for native SecureStore auth.
  */
 export async function handleSupabaseAuthUrl(url: string): Promise<boolean> {
+  if (!isTrustedRecoveryCallback(url)) return false;
   try {
     const { hashParams, searchParams } = parseAuthUrlParts(url);
 

@@ -26,7 +26,7 @@ import {
 import { setSessionState } from "@/services/sessionService";
 import type { AppProfile, AuthSessionState, UserRole } from "@/types/app";
 
-export type ProfileErrorCode = "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING";
+export type ProfileErrorCode = "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING" | "NETWORK_ERROR";
 
 /** Stable key for deduping auth session applies; null when there is no session. */
 function getSessionKey(session: Session | null): string | null {
@@ -137,6 +137,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("[AuthProvider] profile load failed (result)", result.error);
         }
       }
+    } catch {
+      // HTTP timeout, offline state, or an unexpected parsing error must not
+      // leave a signed-in user on the spinner forever.
+      if (gen !== profileLoadGenRef.current) return;
+      setProfile(null);
+      setRole(null);
+      setProfileError(profileErrorMessage("NETWORK_ERROR"));
     } finally {
       if (gen === profileLoadGenRef.current) {
         setProfileLoading(false);
@@ -145,21 +152,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // A driver must be able to sign out while offline. "global" revocation
+    // makes logout depend on Supabase's network; local scope clears this
+    // device's persisted session without touching another employee device.
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) throw new Error("Could not sign out on this device. Please try again.");
     clearRecoveryFlags();
     profileLoadGenRef.current += 1;
-    setProfileLoading(false);
-    await supabase.auth.signOut();
     lastProfileUserIdRef.current = null;
-    const {
-      data: { session: after },
-    } = await supabase.auth.getSession();
-    if (!after) {
-      applyAuthSession(null);
-      setProfile((p) => (p === null ? p : null));
-      setRole((r) => (r === null ? r : null));
-      setProfileError((e) => (e === null ? e : null));
-    }
-    setIsLoading((prev) => (prev ? false : prev));
+    setProfileLoading(false);
+    applyAuthSession(null);
+    setProfile(null);
+    setRole(null);
+    setProfileError(null);
+    setIsLoading(false);
   }, [applyAuthSession, clearRecoveryFlags]);
 
   /** Clear stored session locally without API call. Use when refresh token is invalid. */
@@ -186,10 +192,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       err.message?.includes("Refresh Token Not Found"));
 
   const retryLoadProfile = useCallback(async () => {
-    if (user) {
-      setIsLoading(true);
+    if (!user) return;
+    setIsLoading(true);
+    try {
       await loadProfile(user.id);
-      setIsLoading((prev) => (prev ? false : prev));
+    } finally {
+      setIsLoading(false);
     }
   }, [user, loadProfile]);
 
@@ -297,7 +305,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await clearInvalidSession();
           return;
         }
-        throw err;
+        // A SecureStore read or auth initialization can throw, not just
+        // return a { session, error } result. Fall back to login instead
+        // of leaving initialization rejected and the splash indefinitely.
+        if (!cancelled) {
+          profileLoadGenRef.current += 1;
+          lastProfileUserIdRef.current = null;
+          applyAuthSession(null);
+          setProfile(null);
+          setRole(null);
+          setProfileError(null);
+        }
+        return;
       } finally {
         /* Cancelled or no user: end boot loading. Signed-in: cleared after profile load below. */
         if (cancelled || !initialSession?.user) {
@@ -396,7 +415,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const linkingSub = Linking.addEventListener("url", (event) => {
-      void handleUrl(event.url);
+      void handleUrl(event.url).catch(() => {
+        if (isPasswordRecoveryDeepLink(event.url)) clearRecoveryFlags();
+        if (__DEV__) console.warn("[Auth deep link] Could not process the link");
+      });
     });
 
     let authSubscription: { unsubscribe: () => void } | null = null;
@@ -421,7 +443,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       authSubscription = subscription;
-    })();
+    })().catch(() => {
+      if (!cancelled) setIsLoading(false);
+      if (__DEV__) console.warn("[AuthProvider] Initialization failed; sign in again");
+    });
 
     return () => {
       cancelled = true;
