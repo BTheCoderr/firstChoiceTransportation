@@ -78,6 +78,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: "8c5af85c-7504-4425-8209-7d14ce0eedab",
     },
+    gitCommitHash: process.env.EAS_BUILD_GIT_COMMIT_HASH ?? process.env.GITHUB_SHA ?? "",
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL ?? "",
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? "",
   },
