@@ -1,3 +1,14 @@
+## October 16 stabilization handoff (original 1–9 scope)
+
+- The latest Expo code includes the current role-gated driver/admin screens, administrator-created driver accounts, weekly payroll approval, and server-verified GPS activity. Do not merge the old `stabilization-pass-1` branch wholesale.
+- Restored a protected **Diagnostics & build info** page accessible to a signed-in driver from Profile and to an admin from Dashboard. It displays native app/build version and sanitized runtime identifiers, never keys, employee GPS coordinates, shift data or JWTs.
+- Restored a root-level JavaScript error boundary. The fallback offers a local retry and a local-only sign-out; it never displays raw exception messages to employees. This does **not** catch native iOS process crashes.
+- Run `npm ci && npm run verify:app` before producing a release candidate. This includes TypeScript, pinned native navigation, timing, security, admin/GPS QA, website build, and Expo Doctor. `--skip-expo-doctor` is only a partial developer check and is **not** a release pass.
+- GitHub Actions builds require `EXPO_TOKEN` in this repository's **Actions repository secrets**; no token belongs in the code or in a chat. An internal iOS preview still requires physical iPhone login, GPS/background, and weekly payroll testing, plus a separately approved release build. Build success is not App Store approval.
+- Keep GPS geofence auto-clockout disabled. Migration 020 remains a separate coordinated permissions cutover after the compatible driver build is installed and validated. Do not alter payroll or location records to simulate QA.
+
+---
+
 # First Choice Transportation release checklist
 
 ## Before restoring production access

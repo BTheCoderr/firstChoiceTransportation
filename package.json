@@ -21,7 +21,8 @@
     "deps:verify": "node -e \"const p=require('./node_modules/react-native-screens/package.json'); if(p.version!=='4.16.0'){console.error('Expected react-native-screens@4.16.0, got',p.version); process.exit(1)} console.log('react-native-screens@'+p.version);\"",
     "deps:reinstall": "rm -rf node_modules && npm install",
     "qa:release": "node scripts/release-security-qa.mjs",
-    "qa:admin-review": "node scripts/qa-admin-review.mjs"
+    "qa:admin-review": "node scripts/qa-admin-review.mjs",
+    "verify:app": "node scripts/verify-app.cjs"
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",

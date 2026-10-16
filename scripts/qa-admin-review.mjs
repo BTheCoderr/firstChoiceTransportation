@@ -225,4 +225,27 @@ for (const path of ["src/services/movement.ts", "src/services/suspicious.ts"]) {
 const profileMetadataPrivileges = read("supabase/migrations/036_revoke_anon_profile_metadata.sql");
 assert.match(profileMetadataPrivileges, /REVOKE ALL ON FUNCTION public\.get_my_profile_meta\(\) FROM PUBLIC, anon/);
 assert.match(profileMetadataPrivileges, /GRANT EXECUTE ON FUNCTION public\.get_my_profile_meta\(\) TO authenticated/);
+// Stabilization items from the original 1–9 plan must remain in active main.
+const rootLayout = read("app/_layout.tsx");
+assert.match(rootLayout, /AppErrorBoundary/);
+assert.match(rootLayout, /isSupabaseConfigured/);
+const errorBoundary = read("src/components/AppErrorBoundary.tsx");
+assert.match(errorBoundary, /getDerivedStateFromError/);
+assert.match(errorBoundary, /scope: "local"/);
+assert.match(errorBoundary, /if \(__DEV__\)/);
+assert.doesNotMatch(errorBoundary, /<Text[^>]*>\s*\{(?:error|msg|this\.state\.error)/);
+const diagnostics = read("src/components/AppDiagnosticsPanel.tsx");
+assert.match(diagnostics, /Constants\.nativeBuildVersion/);
+assert.match(diagnostics, /gitCommitHash/);
+assert.doesNotMatch(diagnostics, /supabaseAnonKey|access_token/);
+assert.match(read("app/(driver)/_layout.tsx"), /name="diagnostics"/);
+assert.match(read("app/(admin)/_layout.tsx"), /name="diagnostics"/);
+assert.match(read("app/(driver)/profile.tsx"), /Diagnostics & build info/);
+assert.match(read("app/(admin)/index.tsx"), /Diagnostics & build info/);
+assert.match(read("app.config.ts"), /EAS_BUILD_GIT_COMMIT_HASH/);
+const verifyScript = read("scripts/verify-app.cjs");
+assert.match(verifyScript, /expo-doctor/);
+assert.match(verifyScript, /qa:release/);
+assert.match(verifyScript, /qa:admin-review/);
+
 console.log("Admin review, secure support, GPS evidence, native picker and payroll QA passed.");
