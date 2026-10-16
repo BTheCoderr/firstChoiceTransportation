@@ -70,20 +70,33 @@ export default function LoginScreen() {
     setError(null);
     setIsSubmitting(true);
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-
-    if (signInError) {
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (signInError) {
+        setError(signInError.message === "Invalid login credentials"
+          ? "Invalid email or password."
+          : "Could not sign in. Check your connection, verify your account is activated, and try again.");
+        return;
+      }
+      // Do not keep typed credentials in component state after a successful login.
+      setPassword("");
+    } catch {
+      setError("Could not reach the sign-in service. Check your connection and retry.");
+    } finally {
       setIsSubmitting(false);
-      setError(signInError.message === "Invalid login credentials"
-        ? "Invalid email or password."
-        : "Could not sign in. Check your connection, verify your account is activated, and try again.");
-      return;
     }
+  };
 
-    setIsSubmitting(false);
+  const handleSignOut = async () => {
+    try {
+      setError(null);
+      await signOut();
+    } catch {
+      setError("Could not sign out on this device. Please try again.");
+    }
   };
 
   if (authBusy) {
@@ -122,11 +135,11 @@ export default function LoginScreen() {
         contentContainerStyle={styles.centeredWide}
       >
         <Text style={styles.errorTitle}>Cannot load your account</Text>
-        <Text style={styles.errorText}>{profileError}</Text>
+        <Text style={styles.errorText}>{error ?? profileError}</Text>
         <Pressable style={styles.retryButton} onPress={retryLoadProfile}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </Pressable>
-        <Pressable style={styles.signOutButton} onPress={signOut}>
+        <Pressable style={styles.signOutButton} onPress={() => { void handleSignOut(); }}>
           <Text style={styles.signOutButtonText}>Sign Out</Text>
         </Pressable>
       </ScreenContainer>
@@ -160,6 +173,7 @@ export default function LoginScreen() {
         textContentType="username"
         keyboardType="email-address"
         editable={!isSubmitting}
+        accessibilityLabel="Email address"
       />
 
       <TextInput
@@ -172,6 +186,7 @@ export default function LoginScreen() {
         autoComplete="current-password"
         textContentType="password"
         editable={!isSubmitting}
+        accessibilityLabel="Password"
       />
 
       {error ? (
