@@ -14,6 +14,7 @@ const steps = [
   ["Option B timing", "npm", ["run", "qa:option-b-timing"]],
   ["Release and security", "npm", ["run", "qa:release"]],
   ["Admin review and GPS", "npm", ["run", "qa:admin-review"]],
+  ["Authentication and recovery", "npm", ["run", "qa:auth"]],
   ["Website production build", "npm", ["run", "build", "--prefix", "web"]],
 ];
 if (!skipDoctor) {
