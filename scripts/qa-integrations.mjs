@@ -44,6 +44,11 @@ assert.equal(eas.build.production.distribution, "store");
 assert.match(iosWorkflow, /EXPO_TOKEN: \$\{\{ secrets\.EXPO_TOKEN \}\}/);
 assert.match(siteWorkflow, /NETLIFY_AUTH_TOKEN/);
 assert.match(siteWorkflow, /web\/out/);
+assert.match(siteWorkflow, /exit 1/, "Missing deployment authorization must fail the job");
+assert.doesNotMatch(siteWorkflow, /workflow_dispatch:/, "Unverified manual deploy may bypass required CI");
+assert.match(siteWorkflow, /node scripts\/qa-live-website\.mjs/, "Verify actual public pages after a successful deploy");
+assert.match(read("scripts/qa-live-website.mjs"), /\/auth\/reset-password/, "Production recovery callback needs post-deploy smoke");
+assert.match(read("scripts/qa-live-website.mjs"), /HTTP 200/, "Public website verification needs real 200 responses");
 assert.equal(packageConfig.scripts["eas-build-post-install"], "node scripts/validate-eas-env.cjs");
 assert.match(ci, /npm run qa:integrations/);
 
