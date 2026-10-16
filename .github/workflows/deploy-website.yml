@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   website:
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -66,4 +66,4 @@ jobs:
         run: |
           npx --yes netlify-cli deploy --prod --dir web/out --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN" --json
           echo "### First Choice production website deployed" >> "$GITHUB_STEP_SUMMARY"
-          echo "Published the verified static export from commit \`${GITHUB_SHA}\` to https://firstchoicetransportation.netlify.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "Published the verified static export from commit $(git rev-parse HEAD) to https://firstchoicetransportation.netlify.app" >> "$GITHUB_STEP_SUMMARY"
