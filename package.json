@@ -23,6 +23,8 @@
     "qa:release": "node scripts/release-security-qa.mjs",
     "qa:admin-review": "node scripts/qa-admin-review.mjs",
     "qa:auth": "node scripts/qa-auth-flows.mjs",
+    "qa:integrations": "node scripts/qa-integrations.mjs",
+    "eas-build-post-install": "node scripts/validate-eas-env.cjs",
     "verify:app": "node scripts/verify-app.cjs"
   },
   "dependencies": {
