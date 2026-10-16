@@ -80,7 +80,7 @@ export function validateProfileForSingleCompany(
 }
 
 export function profileErrorMessage(
-  error: "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING"
+  error: "PROFILE_MISSING" | "COMPANY_MISMATCH" | "ROLE_MISSING" | "NETWORK_ERROR"
 ): string {
   switch (error) {
     case "PROFILE_MISSING":
