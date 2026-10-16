@@ -1,0 +1,69 @@
+name: First Choice Website Deploy
+
+# Publish only the exact commit that passed all First Choice CI checks.
+# Netlify is a static export; a GitHub Actions site-scoped token is needed.
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firstchoice-netlify-production
+  cancel-in-progress: true
+
+jobs:
+  website:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: a4216bd6-ad04-4ed8-ba99-8f676fefe1bc
+    steps:
+      - name: Verify Netlify deploy authorization
+        id: auth
+        shell: bash
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Website not deployed::Add NETLIFY_AUTH_TOKEN to this repository's Actions secrets to enable automatic website publication."
+            echo "### Website not deployed" >> "$GITHUB_STEP_SUMMARY"
+            echo "The source is tested but the Netlify production site was not updated: NETLIFY_AUTH_TOKEN is missing." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout verified source
+        if: steps.auth.outputs.configured == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Use Node 20
+        if: steps.auth.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build static website
+        if: steps.auth.outputs.configured == 'true'
+        run: |
+          npm ci --prefix web
+          npm run build --prefix web
+          test -f web/out/auth/reset-password/index.html
+          test -f web/out/support/index.html
+          test -f web/out/privacy/index.html
+
+      - name: Deploy verified static site to the existing Netlify project
+        if: steps.auth.outputs.configured == 'true'
+        shell: bash
+        run: |
+          npx --yes netlify-cli deploy --prod --dir web/out --site "$NETLIFY_SITE_ID" --auth "$NETLIFY_AUTH_TOKEN" --json
+          echo "### First Choice production website deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "Published the verified static export from commit \`${GITHUB_SHA}\` to https://firstchoicetransportation.netlify.app" >> "$GITHUB_STEP_SUMMARY"
