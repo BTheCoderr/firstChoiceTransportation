@@ -1,4 +1,5 @@
 import * as Linking from "expo-linking";
+import { isTrustedRecoveryCallback } from "@/auth/trustedRecoveryCallback";
 
 /**
  * Must match `scheme` in app.config.ts.
@@ -47,7 +48,7 @@ function recoveryHintsInString(s: string): boolean {
  * Detect recovery flows from implicit redirect URLs (hash/query) and from Expo-parsed paths.
  */
 export function isPasswordRecoveryDeepLink(url: string): boolean {
-  if (!url) return false;
+  if (!url || !isTrustedRecoveryCallback(url)) return false;
   if (recoveryHintsInString(url)) return true;
   try {
     const parsed = Linking.parse(url);
