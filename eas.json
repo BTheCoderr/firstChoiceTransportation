@@ -9,20 +9,23 @@
       "distribution": "internal",
       "ios": {
         "simulator": true
-      }
+      },
+      "environment": "development"
     },
     "preview": {
       "distribution": "internal",
       "ios": {
         "simulator": false
-      }
+      },
+      "environment": "preview"
     },
     "production": {
       "distribution": "store",
       "ios": {
         "resourceClass": "m-medium"
       },
-      "autoIncrement": true
+      "autoIncrement": true,
+      "environment": "production"
     }
   },
   "submit": {

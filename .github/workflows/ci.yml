@@ -45,6 +45,9 @@ jobs:
       - name: Authentication and recovery regression QA
         run: npm run qa:auth
 
+      - name: Supabase, Netlify and EAS integration QA
+        run: npm run qa:integrations
+
       - name: Expo Doctor (release compatibility)
         run: npx --yes expo-doctor
 

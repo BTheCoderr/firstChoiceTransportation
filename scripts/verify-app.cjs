@@ -15,6 +15,7 @@ const steps = [
   ["Release and security", "npm", ["run", "qa:release"]],
   ["Admin review and GPS", "npm", ["run", "qa:admin-review"]],
   ["Authentication and recovery", "npm", ["run", "qa:auth"]],
+  ["Service configuration and release links", "npm", ["run", "qa:integrations"]],
   ["Website production build", "npm", ["run", "build", "--prefix", "web"]],
 ];
 if (!skipDoctor) {
